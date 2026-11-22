@@ -1,0 +1,50 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "CertificateObjectsOnly",
+      "Effect": "Allow",
+      "Action": [
+        "s3:PutObject",
+        "s3:GetObject"
+      ],
+      "Resource": [
+        "arn:aws:s3:::certificates/*"
+      ]
+    },
+    {
+      "Sid": "UseCertificateKey",
+      "Effect": "Allow",
+      "Action": [
+        "kms:GenerateDataKey",
+        "kms:Decrypt"
+      ],
+      "Resource": [
+        "arn:aws:kms:*:*:key/*"
+      ]
+    },
+    {
+      "Sid": "ReadOwnSecretsOnly",
+      "Effect": "Allow",
+      "Action": [
+        "secretsmanager:GetSecretValue"
+      ],
+      "Resource": [
+        "arn:aws:secretsmanager:*:*:secret:ett/db*",
+        "arn:aws:secretsmanager:*:*:secret:ett/sendgrid*",
+        "arn:aws:secretsmanager:*:*:secret:ett/service-client*"
+      ]
+    },
+    {
+      "Sid": "WriteOwnLogsOnly",
+      "Effect": "Allow",
+      "Action": [
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Resource": [
+        "arn:aws:logs:*:*:log-group:/ett/s2:*"
+      ]
+    }
+  ]
+}

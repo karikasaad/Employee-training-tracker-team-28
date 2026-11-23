@@ -1,4 +1,4 @@
-// EN: Assignment endpoints (docs/API_CONTRACT.md 4.9 and 4.10). A manager assigns a training to one
+// EN: Assignment endpoints (docs/API_CONTRACT.md 4.9, 4.10 and 4.11). A manager assigns a training to one
 //     employee of THEIR team, or to the whole team; everyone reads their own assignments with a calculated
 //     status (Assigned / Completed / Overdue).
 // Franco: Endpoints el assignments (el contract 4.9 w 4.10). El manager bey-assign training le mowazzaf
@@ -8,7 +8,7 @@
 const express = require('express');
 const { badRequest, notFound, forbidden, conflict } = require('../../../common/errors');
 const { requireUuid, requireBody } = require('../validate');
-const { isValidDate } = require('../rules');
+const { isValidDate, nextDueDate } = require('../rules');
 const { wrap } = require('./employees');
 
 // EN: read and check the POST body: exactly ONE of employeeId / teamId, a trainingId, and a dueDate that is
@@ -89,6 +89,56 @@ function createAssignmentsRouter({ auth, repo, access, today }) {
   // Franco: 4.10: el assignments bta3et el caller nafso. "me" gaya men el TOKEN bas.
   router.get('/api/assignments/me', auth.requireAuth(['Employee', 'Manager']), wrap(async (req, res) => {
     res.json(await repo.listAssignmentsOfEmployee(access.callerEmployeeId(req), today()));
+  }));
+
+  // EN: 4.11 PATCH /api/assignments/{id}/complete: the employee marks THEIR OWN training as completed.
+  //     Security check (ownership): the employee id comes from the TOKEN, never from the URL or the body,
+  //     and the assignment must belong to that employee. Nobody can complete it for someone else, not even
+  //     their manager (403).
+  // Franco: 4.11: el mowazzaf bey2ool en el training BTA3O khelset. Check amn (ownership): el employee id
+  //     men el TOKEN, 3omro ma men el URL wala el body, w el assignment lazem yeb2a bta3 el mowazzaf da.
+  //     Ma7addesh ye2fel assignment le 7ad tany, 7atta el manager bta3o (403).
+  router.patch('/api/assignments/:id/complete', auth.requireAuth(['Employee', 'Manager']), wrap(async (req, res) => {
+    const id = requireUuid(req.params.id, 'id');
+    const me = access.callerEmployeeId(req);
+    const day = today();
+
+    const assignment = await repo.getAssignment(id, day);
+    if (!assignment) throw notFound('Assignment not found');
+    if (assignment.employeeId !== me) throw forbidden('You can only complete your own assignments');
+    if (assignment.completedAt) throw conflict('This assignment is already completed');
+
+    // EN: one transaction: close this assignment AND (if the training expires) create the renewal.
+    //     Either both happen or neither does.
+    // Franco: transaction wa7da: ne2fel el assignment W (law el training leha sala7eya) ne3mel el renewal.
+    //     Ya el etnein ye7salo ya wala wa7ed.
+    const result = await repo.withTransaction(async (tx) => {
+      const closed = await repo.completeAssignment(id, me, tx);
+      // EN: closed by another request a moment ago -> 409, same as above.
+      // Franco: et2afal men request tany men lahza -> 409, zay foo2.
+      if (!closed) throw conflict('This assignment is already completed');
+
+      // EN: RULE "renewal": a training with validityMonths gets its next assignment automatically, due
+      //     completedAt + validityMonths (rules.js nextDueDate), linked with renewalOfId. Same manager as before.
+      // Franco: RULE "el renewal": training leha validityMonths biyetfete7laha assignment gedeed lewa7do,
+      //     ma3ado completedAt + validityMonths (nextDueDate fe rules.js), marboot b renewalOfId. Nafs el manager.
+      let renewalId = null;
+      if (closed.validity_months) {
+        renewalId = await repo.insertAssignment({
+          employeeId: me,
+          trainingId: closed.training_id,
+          assignedBy: closed.assigned_by,
+          dueDate: nextDueDate(closed.completed_at, closed.validity_months),
+          renewalOfId: id,
+        }, tx);
+      }
+      return { renewalId };
+    });
+
+    res.json({
+      completed: await repo.getAssignment(id, day),
+      renewal: result.renewalId ? await repo.getAssignment(result.renewalId, day) : null,
+    });
   }));
 
   return router;

@@ -137,6 +137,21 @@ function createRepo(db) {
       return rows.map((r) => toAssignment(r, today));
     },
 
+    // EN: close an assignment. The WHERE makes it safe even if two requests arrive at the same moment:
+    //     only an assignment that belongs to THIS employee and is still OPEN is updated. No row back = nothing
+    //     changed. It also returns the training's validity_months for the renewal rule.
+    // Franco: ye2fel assignment. El WHERE bey-khalleeh aman 7atta law etnein requests gom fe nafs el lahza:
+    //     bas el assignment bta3 el mowazzaf DA w lessa MAFTOO7 beyet3addel. Law mafeesh row = mafeesh
+    //     7aga etghayyaret. Bey-rga3 kaman validity_months bta3 el training 3ashan rule el renewal.
+    async completeAssignment(id, employeeId, tx) {
+      return tx.queryOne(`
+        UPDATE assignments a
+           SET completed_at = now()
+          FROM trainings t
+         WHERE a.id = $1 AND a.employee_id = $2 AND a.completed_at IS NULL AND t.id = a.training_id
+        RETURNING a.completed_at, a.training_id, a.assigned_by, t.validity_months`, [id, employeeId]);
+    },
+
     withTransaction: (work) => db.withTransaction(work),
 
     // ------------------------------------------------------------ trainings

@@ -1,0 +1,6 @@
+# EN: installed packages are never committed (npm install recreates them).
+# Franco: el packages el metsatbeen 3omrhom ma yetrafe3o (npm install bey3melhom tani).
+node_modules/
+# EN: local secrets never go to GitHub.
+# Franco: el secrets el local 3omraha ma tero7 GitHub.
+.env

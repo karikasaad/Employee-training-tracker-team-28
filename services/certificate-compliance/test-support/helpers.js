@@ -50,7 +50,7 @@ const tokens = {
 //     Mel-lef bel createDb el 7a2i2i, f qawa3ed "mafeesh quotes fel SQL" betesh-taghal fel tests kaman.
 function createFakePool() {
   const calls = [];
-  const pool = { calls, failInsert: false, selectRows: [], flagRows: [], updateRows: [] };
+  const pool = { calls, failInsert: false, selectRows: [], flagRows: [], flagReads: [], updateRows: [] };
   const run = async (sql, params = []) => {
     calls.push({ sql, params });
     if (/^\s*INSERT INTO certificates/i.test(sql)) {
@@ -66,7 +66,15 @@ function createFakePool() {
     }
     // EN: any SELECT answers with the rows the test put in pool.selectRows.
     // Franco: ay SELECT beyrod bel rows elly el test 7atta fe pool.selectRows.
-    if (/^\s*SELECT/i.test(sql)) return { rows: /FROM compliance_flags/i.test(sql) ? pool.flagRows : pool.selectRows };
+    // EN: compliance_flags SELECTs answer from pool.flagReads (one entry per read, in order), then pool.flagRows.
+    // Franco: SELECT bta3 compliance_flags beyrod men pool.flagReads (3'rd el 2ra2a, bel tarteeb), ba3dein pool.flagRows.
+    if (/INSERT INTO compliance_flags/i.test(sql)) return { rows: [{ id: crypto.randomUUID() }] };
+    if (/UPDATE compliance_flags SET resolved_at/i.test(sql)) return { rows: [{ id: params[0] }] };
+    if (/UPDATE compliance_flags SET notified_at/i.test(sql)) return { rows: [] };
+    if (/^\s*SELECT/i.test(sql)) {
+      if (/FROM compliance_flags/i.test(sql)) return { rows: pool.flagReads.length ? pool.flagReads.shift() : pool.flagRows };
+      return { rows: pool.selectRows };
+    }
     // EN: UPDATE ... RETURNING answers with pool.updateRows ([] = no row matched, e.g. not Pending any more).
     // Franco: UPDATE ... RETURNING beyrod b pool.updateRows ([] = mafeesh satr etatabaq, masalan mesh Pending khalas).
     if (/^\s*UPDATE/i.test(sql)) return { rows: pool.updateRows };
@@ -108,10 +116,10 @@ const IDS = {
   OMAR: '20000000-0000-4000-8000-000000000005', // manager of Laboratory
 };
 const DIRECTORY = [
-  { sub: 'sub-mona', id: IDS.MONA, name: 'Mona Hassan', teamId: IDS.OPS, managerId: IDS.MONA, role: 'Manager' },
-  { sub: 'sub-ahmed', id: IDS.AHMED, name: 'Ahmed Ali', teamId: IDS.OPS, managerId: IDS.MONA, role: 'Employee' },
-  { sub: 'sub-sara', id: IDS.SARA, name: 'Sara Samir', teamId: IDS.OPS, managerId: IDS.MONA, role: 'Employee' },
-  { sub: 'sub-omar', id: IDS.OMAR, name: 'Omar Fathy', teamId: IDS.LAB, managerId: IDS.OMAR, role: 'Manager' },
+  { sub: 'sub-mona', id: IDS.MONA, name: 'Mona Hassan', email: 'mona@example.com', teamId: IDS.OPS, managerId: IDS.MONA, role: 'Manager' },
+  { sub: 'sub-ahmed', id: IDS.AHMED, name: 'Ahmed Ali', email: 'ahmed@example.com', teamId: IDS.OPS, managerId: IDS.MONA, role: 'Employee' },
+  { sub: 'sub-sara', id: IDS.SARA, name: 'Sara Samir', email: 'sara@example.com', teamId: IDS.OPS, managerId: IDS.MONA, role: 'Employee' },
+  { sub: 'sub-omar', id: IDS.OMAR, name: 'Omar Fathy', email: 'omar@example.com', teamId: IDS.LAB, managerId: IDS.OMAR, role: 'Manager' },
 ];
 const TEAMS = [{ id: IDS.OPS, managerId: IDS.MONA }, { id: IDS.LAB, managerId: IDS.OMAR }];
 
@@ -143,7 +151,7 @@ function createFakeUpstream() {
     const me = callerOf(ctx);
     const target = DIRECTORY.find((p) => p.id === id);
     if (!target) throw notFound('Employee not found');
-    if (target.id !== me.id && target.managerId !== me.id) throw forbidden('You are not allowed to see this employee');
+    if (me.role !== 'Service' && target.id !== me.id && target.managerId !== me.id) throw forbidden('You are not allowed to see this employee');
     return target;
   };
   up.getTeams = async (ctx) => {
@@ -170,17 +178,26 @@ function createFakeUpstream() {
   return up;
 }
 
+// EN: fake mailer: remembers every e-mail it was asked to send and answers with ctx.result.
+// Franco: mailer fake: beyfakkar kol e-mail et-talab yetba3at w beyrod b ctx.result.
+function createFakeMailer() {
+  const mailer = { sent: [], result: 'sent' };
+  mailer.send = async (message) => { mailer.sent.push(message); return mailer.result; };
+  return mailer;
+}
+
 // ---------------------------------------------------------------- start the app on a random port
 async function startApp() {
   const pool = createFakePool();
   const storage = createFakeStorage();
   const upstream = createFakeUpstream();
+  const mailer = createFakeMailer();
   const logs = [];
   const logger = { debug() {}, info: (e, f) => logs.push({ e, f }), warn: (e, f) => logs.push({ e, f }), error: (e, f) => logs.push({ e, f }) };
-  const app = createApp({ db: createDb({ pool }), authOptions, upstream, storage, logger, today: () => TODAY, now: () => new Date(`${TODAY}T12:00:00.000Z`) });
+  const app = createApp({ db: createDb({ pool }), authOptions, upstream, storage, mailer, logger, today: () => TODAY, now: () => new Date(`${TODAY}T12:00:00.000Z`) });
   const server = await new Promise((resolve) => { const s = app.listen(0, () => resolve(s)); });
   const url = `http://127.0.0.1:${server.address().port}`;
-  return { url, pool, storage, upstream, logs, close: () => new Promise((resolve) => server.close(resolve)) };
+  return { url, pool, storage, upstream, mailer, logs, close: () => new Promise((resolve) => server.close(resolve)) };
 }
 
 // ---------------------------------------------------------------- request helpers

@@ -8,8 +8,12 @@
 //     Both dates are YYYY-MM-DD in UTC, so the difference is a whole number of days.
 // Franco: Valid = ba2y aktar men 30 yom. Expiring soon = men 0 le 30 yom. Expired = el tareekh fat.
 //     el tarkheen UTC, f el far2 3adad sa7eeh men el ayam.
+function daysUntil(expiryDate, today) {
+  return Math.round((Date.parse(`${expiryDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+}
+
 function validityOf(expiryDate, today) {
-  const days = Math.round((Date.parse(`${expiryDate}T00:00:00Z`) - Date.parse(`${today}T00:00:00Z`)) / 86_400_000);
+  const days = daysUntil(expiryDate, today);
   if (days < 0) return 'Expired';
   if (days <= 30) return 'Expiring soon';
   return 'Valid';
@@ -40,4 +44,4 @@ function toCertificate(row, today) {
   };
 }
 
-module.exports = { validityOf, toCertificate };
+module.exports = { daysUntil, validityOf, toCertificate };

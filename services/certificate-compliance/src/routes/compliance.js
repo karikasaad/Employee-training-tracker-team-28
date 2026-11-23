@@ -1,12 +1,12 @@
-// EN: Compliance endpoints of Service 2. This file: GET /api/compliance/teams/{teamId} (5.9), the answer that
-//     Service 3 (the manager dashboard) reads.
+// EN: Compliance endpoints of Service 2: GET /api/compliance/teams/{teamId} (5.9), the answer that Service 3
+//     (the manager dashboard) reads, and POST /api/compliance/run-check (5.10), the daily job.
 // Franco: Endpoints el compliance fe Service 2. El file da: GET /api/compliance/teams/{teamId} (5.9), el rad
 //     elly Service 3 (dashboard el manager) bey2rah.
 'use strict';
 const express = require('express');
 const { buildTeamCompliance } = require('../compliance');
 
-function createComplianceRouter({ auth, upstream, repo, access, today, now }) {
+function createComplianceRouter({ auth, upstream, repo, access, today, now, dailyCheck }) {
   const router = express.Router();
 
   // EN: Who may ask: the manager of {teamId}, or the Service token (the daily jobs). The team check goes
@@ -30,6 +30,18 @@ function createComplianceRouter({ auth, upstream, repo, access, today, now }) {
       return res.json(buildTeamCompliance({
         teamId, employees, certRows, assignments, openFlagRows, today: today(), nowIso: now().toISOString(),
       }));
+    } catch (err) {
+      return next(err);
+    }
+  });
+
+  // EN: 5.10 The daily check. SERVICE TOKEN ONLY (the scheduled job): an Employee or a Manager gets 403.
+  //     It works on every team, so it forwards the Service token to S1 (S1 lists all teams for it).
+  // Franco: 5.10 El daily check. SERVICE TOKEN BAS (el job el mowa3ad): el Employee aw el Manager yeakhod 403.
+  //     Beyeshtaghal 3ala kol el teams, f bey-forward Service token le S1 (S1 beyedi kol el teams lel Service).
+  router.post('/api/compliance/run-check', auth.requireAuth(['Service']), async (req, res, next) => {
+    try {
+      return res.json(await dailyCheck.run(access.ctxOf(req)));
     } catch (err) {
       return next(err);
     }

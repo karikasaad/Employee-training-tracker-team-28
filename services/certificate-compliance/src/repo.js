@@ -74,10 +74,45 @@ function createRepo(db) {
   // Franco: el flags elly lessa OPEN (resolved_at fady) le el mowazzafeen dool.
   function openFlags(employeeIds) {
     return db.query(
-      `SELECT employee_id, training_id, flag_type, raised_at FROM compliance_flags
+      `SELECT id, certificate_id, employee_id, training_id, flag_type, raised_at, notified_at FROM compliance_flags
        WHERE employee_id = ANY($1::uuid[]) AND resolved_at IS NULL`,
       [employeeIds],
     );
+  }
+
+  // EN: raise new flags and resolve old ones for one team, as ONE unit (all or nothing). "ON CONFLICT DO NOTHING"
+  //     means that if the same open flag already exists (two runs at once), nothing is duplicated.
+  // Franco: nerfa3 flags gedeeda w n-resolve el adeema le team wa7da, ka wa7da (ya kolo ya wala 7aga).
+  //     "ON CONFLICT DO NOTHING" ya3ni law nafs el flag maftoo7a asln (job eshtaghal marteen m3a ba3d) mafeesh takraar.
+  function applyFlagChanges(toRaise, toResolve) {
+    return db.withTransaction(async (tx) => {
+      let raised = 0;
+      let resolved = 0;
+      for (const f of toRaise) {
+        const rows = await tx.query(
+          `INSERT INTO compliance_flags (certificate_id, employee_id, training_id, flag_type)
+           VALUES ($1, $2, $3, $4)
+           ON CONFLICT (employee_id, training_id, flag_type) WHERE resolved_at IS NULL DO NOTHING
+           RETURNING id`,
+          [f.certificateId, f.employeeId, f.trainingId, f.flagType],
+        );
+        raised += rows.length;
+      }
+      for (const id of toResolve) {
+        const rows = await tx.query(
+          'UPDATE compliance_flags SET resolved_at = now() WHERE id = $1 AND resolved_at IS NULL RETURNING id',
+          [id],
+        );
+        resolved += rows.length;
+      }
+      return { raised, resolved };
+    });
+  }
+
+  // EN: remember that these flags were e-mailed (so the same reminder is not sent again).
+  // Franco: nes-geel en el flags di et-ba3at (3ashan nafs el tazkeer mayetba3tsh tany).
+  function markNotified(flagIds) {
+    return db.query('UPDATE compliance_flags SET notified_at = now() WHERE id = ANY($1::uuid[])', [flagIds]);
   }
 
   // EN: edit the dates and texts, but ONLY while the certificate is still Pending. The "Pending" check is
@@ -141,7 +176,7 @@ function createRepo(db) {
     return db.query(AUDIT_SQL, [actorId, action, certificateId, ip || null, result]);
   }
 
-  return { insertCertificate, listByEmployee, findById, listByEmployees, openFlags, updateIfPending, decide, softDelete, audit };
+  return { insertCertificate, listByEmployee, findById, listByEmployees, openFlags, applyFlagChanges, markNotified, updateIfPending, decide, softDelete, audit };
 }
 
 module.exports = { createRepo, CERTIFICATE_COLUMNS };

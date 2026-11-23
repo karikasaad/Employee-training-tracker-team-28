@@ -14,6 +14,12 @@ x-service-env: &service-env
   # EN: the S3 address the BROWSER can reach (download links); inside Docker the services use AWS_ENDPOINT_URL.
   # Franco: 3enwan S3 elly el BROWSER yeqdar yewsal leh (links el download); gowwa Docker el services bet-estakhdem AWS_ENDPOINT_URL.
   S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:4566}
+  # EN: e-mail settings of the daily check. The SendGrid key is NOT here: it comes from Secrets Manager (ett/sendgrid).
+  #     SENDGRID_API_KEY is an optional override for local tests; empty = use the secret.
+  # Franco: settings el e-mail bta3 el daily check. El SendGrid key MESH hena: gai men Secrets Manager (ett/sendgrid).
+  #     SENDGRID_API_KEY ekhteyari lel tagareb el local bas; fadi = nesta3mel el secret.
+  SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+  SENDGRID_FROM_EMAIL: ${SENDGRID_FROM_EMAIL:-noreply@example.com}
   DB_HOST: ${DB_HOST:-postgres}
   DB_PORT: ${DB_PORT:-5432}
   DB_NAME: ${POSTGRES_DB:-ett}

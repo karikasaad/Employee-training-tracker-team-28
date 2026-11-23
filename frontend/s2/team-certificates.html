@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<!-- EN: Service 2 "Team certificates" (managers only): the certificates of my team, a filter by review status (Pending
+     first), Download, and Verify / Reject with a reason. A manager cannot decide their own certificate.
+     Franco: Service 2 "Team certificates" (lel managers bas): certificates el team bta3i, filter bel status (Pending el awel),
+     Download, w Verify / Reject m3a sabab. El manager mayeqdarsh yeqarrar fe certificate bta3o howa. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Team certificates - Training Tracker</title>
+  <link rel="stylesheet" href="/common/style.css">
+</head>
+<body>
+  <main>
+    <h1>Team certificates</h1>
+    <p class="lead">Check the certificates your team uploaded. Download the file, then Verify it or Reject it with a reason. A manager cannot verify their own certificate.</p>
+
+    <div class="row">
+      <div>
+        <label for="team">Team</label>
+        <select id="team"></select>
+      </div>
+      <div>
+        <label for="status">Review status</label>
+        <select id="status">
+          <option value="Pending" selected>Pending (to check)</option>
+          <option value="Verified">Verified</option>
+          <option value="Rejected">Rejected</option>
+          <option value="">All</option>
+        </select>
+      </div>
+    </div>
+
+    <div id="certificates"></div>
+  </main>
+
+  <script src="/common/config.js"></script>
+  <script src="/config.local.js"></script>
+  <script src="/common/auth.js"></script>
+  <script src="/common/api.js"></script>
+  <script src="/common/ui.js"></script>
+  <script src="/s2/s2-common.js"></script>
+  <script src="/s2/team-certificates.js"></script>
+</body>
+</html>

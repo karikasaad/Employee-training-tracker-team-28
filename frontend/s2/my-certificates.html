@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<!-- EN: Service 2 "My certificates": upload a certificate (PDF, JPG or PNG, max 5 MB) for a training, see my certificates with
+     their review status, download them, and delete one while it is still Pending. Employees and Managers.
+     Franco: Service 2 "My certificates": narfa3 certificate (PDF, JPG aw PNG, 5 MB bel kteer) le training, nshoof certificates
+     bta3ty b status el review, nenazzelha, w nemsa7 wa7da lama tkoon lessa Pending. Lel Employee w el Manager. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My certificates - Training Tracker</title>
+  <link rel="stylesheet" href="/common/style.css">
+</head>
+<body>
+  <main>
+    <h1>My certificates</h1>
+    <p class="lead">Upload the certificate you received after a training. Your manager checks it: until then it stays Pending. Only Verified certificates count for compliance.</p>
+
+    <h2>Upload a certificate</h2>
+    <form id="upload-form" class="panel">
+      <div class="row">
+        <div>
+          <label for="training">Training</label>
+          <select id="training" required></select>
+        </div>
+        <div>
+          <label for="title">Title</label>
+          <input id="title" maxlength="150" required>
+        </div>
+        <div>
+          <label for="issuer">Issuer</label>
+          <input id="issuer" maxlength="150" required>
+        </div>
+        <div>
+          <label for="number">Certificate number (optional)</label>
+          <input id="number" maxlength="100">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="issue-date">Issue date</label>
+          <input id="issue-date" type="date" required>
+        </div>
+        <div>
+          <label for="expiry-date">Expiry date</label>
+          <input id="expiry-date" type="date" required>
+        </div>
+        <div>
+          <label for="file">File (PDF, JPG or PNG, up to 5 MB)</label>
+          <input id="file" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" required>
+        </div>
+        <button id="upload" type="submit">Upload</button>
+      </div>
+    </form>
+
+    <h2>My uploaded certificates</h2>
+    <div id="certificates"></div>
+  </main>
+
+  <script src="/common/config.js"></script>
+  <script src="/config.local.js"></script>
+  <script src="/common/auth.js"></script>
+  <script src="/common/api.js"></script>
+  <script src="/common/ui.js"></script>
+  <script src="/s2/s2-common.js"></script>
+  <script src="/s2/my-certificates.js"></script>
+</body>
+</html>

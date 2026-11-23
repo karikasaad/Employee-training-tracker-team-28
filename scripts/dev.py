@@ -105,8 +105,11 @@ def cmd_test():
     for svc in SERVICES:
         folder = ROOT / "services" / svc
         print(f"\n=== tests: {svc} ===")
+        # EN: mount the whole "services" folder, because every service requires ../../common.
+        # Franco: bnerkeb folder "services" kollo 3ashan kol service betesta3mel ../../common.
         code = run([
-            "docker", "run", "--rm", "-v", f"{folder}:/app", "-w", "/app", "node:20-alpine",
+            "docker", "run", "--rm", "-v", f"{ROOT / 'services'}:/app/services",
+            "-w", f"/app/services/{svc}", "node:20-alpine",
             "sh", "-c", "npm install --no-audit --no-fund && npm test",
         ])
         failed += 1 if code else 0
@@ -127,6 +130,7 @@ def main():
     if c == "test":
         return cmd_test()
     need_docker()
+    ensure_env()  # EN: docker-compose.yml needs the DB passwords from .env / Franco: docker-compose.yml me7tag passwords el database men .env
     base = compose_base()
     if c == "down":
         return run(base + ["down"])

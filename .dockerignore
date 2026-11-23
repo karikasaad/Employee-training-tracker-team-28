@@ -1,0 +1,15 @@
+# EN: what is NOT sent to Docker when it builds an image (the build context is the repo root).
+# Franco: elly mayetba3atsh le Docker wa2t el build (el context hwa root el repo).
+.git
+**/node_modules
+.env
+.env.*
+!.env.example
+certs
+docs
+frontend
+scripts
+**/test
+**/test-support
+**/coverage
+*.log

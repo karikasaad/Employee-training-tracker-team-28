@@ -1,0 +1,20 @@
+# EN: always use LF line endings for these, even on Windows, so Docker and shell scripts do not break.
+# Franco: dayman LF fe el files di 7atta 3ala Windows, 3ashan Docker w el scripts ma-yet3atalosh.
+* text=auto
+*.js text eol=lf
+*.json text eol=lf
+*.py text eol=lf
+*.sh text eol=lf
+*.sql text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.conf text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+Dockerfile text eol=lf
+.dockerignore text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.pdf binary

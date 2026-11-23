@@ -13,9 +13,13 @@ x-service-env: &service-env
   CERTIFICATES_BUCKET: ${CERTIFICATES_BUCKET:-certificates}
   DB_HOST: ${DB_HOST:-postgres}
   DB_PORT: ${DB_PORT:-5432}
-  DB_NAME: ${DB_NAME:-ett}
-  POSTGRES_USER: ${POSTGRES_USER:-ett_admin}
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local-dev-only-change-me}
+  DB_NAME: ${POSTGRES_DB:-ett}
+  # EN: Cognito ids (public, not secrets); filled in .env after running cognito_init.js. Empty = login not configured yet.
+  # Franco: ids bta3et Cognito (3ammeh, mesh secrets); betetmali fel .env ba3d cognito_init.js. Fadya = el login lessa mesh mazboot.
+  COGNITO_ISSUER: ${COGNITO_ISSUER:-}
+  COGNITO_WEB_CLIENT_ID: ${COGNITO_WEB_CLIENT_ID:-}
+  COGNITO_SERVICE_CLIENT_ID: ${COGNITO_SERVICE_CLIENT_ID:-}
+  COGNITO_JWKS_URL: ${COGNITO_JWKS_URL:-}
   S1_URL: ${S1_URL:-http://s1:5001}
   S2_URL: ${S2_URL:-http://s2:5002}
   S3_URL: ${S3_URL:-http://s3:5003}
@@ -54,10 +58,18 @@ services:
   # EN: the three backend services (Node + Express). Each one is built from its own folder.
   # Franco: el 3 services (Node + Express). Kol wa7da betetbeny men folder-ha.
   s1:
-    build: ./services/employee-training
+    # EN: context = repo root so the Dockerfile can copy services/common too.
+    # Franco: context = root el repo 3ashan el Dockerfile yeqdar yenskh services/common kaman.
+    build:
+      context: .
+      dockerfile: services/employee-training/Dockerfile
     environment:
       <<: *service-env
       PORT: "5001"
+      # EN: this service logs in to Postgres with ITS OWN limited role, never the admin user.
+      # Franco: el service di bet-dkhol Postgres bel role bta3ha el mahdood, 3omraha ma betest3mel el admin.
+      DB_USER: svc_s1
+      DB_PASSWORD: ${DB_S1_PASSWORD:?set DB_S1_PASSWORD in .env (copy .env.example)}
     ports:
       - "5001:5001"
     depends_on:
@@ -65,10 +77,18 @@ services:
         condition: service_healthy
 
   s2:
-    build: ./services/certificate-compliance
+    # EN: context = repo root so the Dockerfile can copy services/common too.
+    # Franco: context = root el repo 3ashan el Dockerfile yeqdar yenskh services/common kaman.
+    build:
+      context: .
+      dockerfile: services/certificate-compliance/Dockerfile
     environment:
       <<: *service-env
       PORT: "5002"
+      # EN: this service logs in to Postgres with ITS OWN limited role, never the admin user.
+      # Franco: el service di bet-dkhol Postgres bel role bta3ha el mahdood, 3omraha ma betest3mel el admin.
+      DB_USER: svc_s2
+      DB_PASSWORD: ${DB_S2_PASSWORD:?set DB_S2_PASSWORD in .env (copy .env.example)}
     ports:
       - "5002:5002"
     depends_on:
@@ -76,10 +96,18 @@ services:
         condition: service_healthy
 
   s3:
-    build: ./services/dashboard-reports
+    # EN: context = repo root so the Dockerfile can copy services/common too.
+    # Franco: context = root el repo 3ashan el Dockerfile yeqdar yenskh services/common kaman.
+    build:
+      context: .
+      dockerfile: services/dashboard-reports/Dockerfile
     environment:
       <<: *service-env
       PORT: "5003"
+      # EN: this service logs in to Postgres with ITS OWN limited role, never the admin user.
+      # Franco: el service di bet-dkhol Postgres bel role bta3ha el mahdood, 3omraha ma betest3mel el admin.
+      DB_USER: svc_s3
+      DB_PASSWORD: ${DB_S3_PASSWORD:?set DB_S3_PASSWORD in .env (copy .env.example)}
     ports:
       - "5003:5003"
     depends_on:

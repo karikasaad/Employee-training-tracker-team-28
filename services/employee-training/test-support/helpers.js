@@ -97,11 +97,11 @@ const authOptions = {
 
 // EN: a signed access token. as = the e-mail name of a seeded user (e.g. 'ahmed'); groups = Cognito groups.
 // Franco: access token mamdy. as = esm el user fel seed (zay 'ahmed'); groups = groups Cognito.
-function token({ as = 'ahmed', groups = ['Employee'], clientId = WEB_CLIENT, expInSec = 900 } = {}) {
+function token({ as = 'ahmed', groups = ['Employee'], clientId = WEB_CLIENT, expInSec = 900, tokenUse = 'access' } = {}) {
   const now = Math.floor(Date.now() / 1000);
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
   const head = b64({ alg: 'RS256', kid: 'test-key' });
-  const body = b64({ iss: ISSUER, token_use: 'access', client_id: clientId, sub: `sub-${as}`, iat: now - 5, exp: now + expInSec, 'cognito:groups': groups });
+  const body = b64({ iss: ISSUER, token_use: tokenUse, client_id: clientId, sub: `sub-${as}`, iat: now - 5, exp: now + expInSec, 'cognito:groups': groups });
   const sig = crypto.sign('RSA-SHA256', Buffer.from(`${head}.${body}`), privateKey).toString('base64url');
   return `${head}.${body}.${sig}`;
 }
@@ -120,6 +120,8 @@ const tokens = {
 // ---------------------------------------------------------------- HTTP
 const quietLogger = { debug() {}, info() {}, warn() {}, error() {} };
 
+// EN: makeApp({ logger }) lets a test read the log lines the app writes.
+// Franco: makeApp({ logger }) bey-khalli el test ye2ra el log lines elly el app katabha.
 function makeApp(extra = {}) {
   const { createApp } = require('../src/app');
   return createApp({ db: getAppDb(), authOptions, logger: quietLogger, ...extra });

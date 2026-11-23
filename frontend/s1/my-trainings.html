@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<!-- EN: Service 1 "My trainings": the signed-in person's profile and their assigned trainings, with a coloured
+     status (Assigned / Overdue / Completed) and a "Mark completed" button. Employees and Managers.
+     Franco: Service 1 "My trainings": profile el shakhs elly 3amel login w el trainings bta3to, bel status
+     molawwan (Assigned / Overdue / Completed) w zorar "Mark completed". Lel Employee w el Manager. -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>My trainings - Training Tracker</title>
+  <link rel="stylesheet" href="/common/style.css">
+</head>
+<body>
+  <main>
+    <h1>My trainings</h1>
+    <p class="lead" id="profile">Loading your profile...</p>
+
+    <div id="counts" class="cards"></div>
+
+    <h2>Assigned to me</h2>
+    <p class="lead">Overdue means the due date has passed and the training is not completed. A training that is due today is not overdue yet.</p>
+    <div id="assignments"></div>
+  </main>
+
+  <script src="/common/config.js"></script>
+  <script src="/config.local.js"></script>
+  <script src="/common/auth.js"></script>
+  <script src="/common/api.js"></script>
+  <script src="/common/ui.js"></script>
+  <script src="/s1/s1-common.js"></script>
+  <script src="/s1/my-trainings.js"></script>
+</body>
+</html>

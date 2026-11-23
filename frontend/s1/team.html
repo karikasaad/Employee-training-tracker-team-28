@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<!-- EN: Service 1 "Team trainings" (Managers): team summary, the team's assignments with an overdue filter,
+     an "Assign training" form (one employee or the whole team) and a small "Create training" form.
+     Franco: Service 1 "Team trainings" (lel Managers): molakhas el team, assignments el team b filter
+     lel overdue, form "Assign training" (mowazzaf wa7ed aw el team kollo) w form so8ayyar "Create training". -->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Team trainings - Training Tracker</title>
+  <link rel="stylesheet" href="/common/style.css">
+</head>
+<body>
+  <main>
+    <h1>Team trainings</h1>
+    <p class="lead">Who in your team has which training, what is overdue, and assign new trainings.</p>
+
+    <div id="manager-only">
+      <div class="row">
+        <div>
+          <label for="team">Team</label>
+          <select id="team"></select>
+        </div>
+        <button id="refresh" type="button" class="secondary">Refresh</button>
+      </div>
+
+      <h2>Summary</h2>
+      <div id="totals" class="cards"></div>
+      <div id="people" style="margin-top:12px"></div>
+
+      <h2>Assignments</h2>
+      <div class="row">
+        <div>
+          <label for="status">Show</label>
+          <select id="status">
+            <option value="">All</option>
+            <option value="overdue">Overdue only</option>
+            <option value="assigned">Not completed, not overdue</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+      <div id="assignments"></div>
+
+      <h2>Assign a training</h2>
+      <form id="assign-form" class="panel">
+        <div class="row">
+          <div>
+            <label for="assign-target">To</label>
+            <select id="assign-target" required></select>
+          </div>
+          <div>
+            <label for="assign-training">Training</label>
+            <select id="assign-training" required></select>
+          </div>
+          <div>
+            <label for="assign-due">Due date</label>
+            <input id="assign-due" type="date" required>
+          </div>
+          <button type="submit" id="assign-button">Assign</button>
+        </div>
+      </form>
+
+      <h2>Create a training</h2>
+      <form id="training-form" class="panel">
+        <div class="row">
+          <div>
+            <label for="training-name">Name</label>
+            <input id="training-name" maxlength="150" required>
+          </div>
+          <div>
+            <label for="training-category">Category</label>
+            <input id="training-category" maxlength="50" required>
+          </div>
+          <div>
+            <label for="training-validity">Valid for (months, empty = never expires)</label>
+            <input id="training-validity" type="number" min="1" max="120" step="1">
+          </div>
+          <div>
+            <label for="training-cert"><input id="training-cert" type="checkbox" style="min-width:0"> Certificate required</label>
+          </div>
+          <button type="submit" id="training-button">Create</button>
+        </div>
+      </form>
+    </div>
+  </main>
+
+  <script src="/common/config.js"></script>
+  <script src="/config.local.js"></script>
+  <script src="/common/auth.js"></script>
+  <script src="/common/api.js"></script>
+  <script src="/common/ui.js"></script>
+  <script src="/s1/s1-common.js"></script>
+  <script src="/s1/team.js"></script>
+</body>
+</html>

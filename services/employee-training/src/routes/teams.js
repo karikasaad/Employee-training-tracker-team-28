@@ -1,11 +1,12 @@
-// EN: Team endpoints (docs/API_CONTRACT.md 4.3, 4.4). S2 and S3 use GET /api/teams for their own
+// EN: Team endpoints (docs/API_CONTRACT.md 4.3, 4.4, 4.5 and 4.5b). S2 and S3 use GET /api/teams for their own
 //     ownership checks: it only ever returns the teams the caller manages.
-// Franco: Endpoints el teams (el contract 4.3, 4.4). S2 w S3 beyesta3melo GET /api/teams fel ownership
+// Franco: Endpoints el teams (el contract 4.3, 4.4, 4.5 w 4.5b). S2 w S3 beyesta3melo GET /api/teams fel ownership
 //     checks bta3thom: beyrga3 bas el teams elly el caller modeerha.
 'use strict';
 const express = require('express');
 const { badRequest } = require('../../../common/errors');
 const { requireUuid } = require('../validate');
+const { summarizeTeam } = require('../summary');
 const { wrap } = require('./employees');
 
 // EN: the allowed ?status= values (lower case in the URL) -> the calculated status they select.
@@ -54,6 +55,21 @@ function createTeamsRouter({ auth, repo, access, today }) {
     await access.assertTeamAccess(req, teamId);
     const all = await repo.listAssignmentsOfTeam(teamId, today());
     res.json(wanted ? all.filter((a) => a.status === wanted) : all);
+  }));
+
+  // EN: 4.5b GET /api/teams/{teamId}/summary: per member counts (Assigned / Overdue / Completed) for the
+  //     manager's team page. Same security as 4.5: only the manager of THIS team, or the Service token.
+  // Franco: 4.5b: ar2am le kol mowazzaf (Assigned / Overdue / Completed) le safhet el team bta3et el
+  //     manager. Nafs amn 4.5: manager el team DA bas, aw el Service token.
+  router.get('/api/teams/:teamId/summary', managerOrService, wrap(async (req, res) => {
+    const teamId = requireUuid(req.params.teamId, 'teamId');
+    const team = await access.assertTeamAccess(req, teamId);
+    const day = today();
+    const [employees, assignments] = await Promise.all([
+      repo.listTeamEmployees(teamId),
+      repo.listAssignmentsOfTeam(teamId, day),
+    ]);
+    res.json({ teamId: team.id, teamName: team.name, today: day, ...summarizeTeam(employees, assignments) });
   }));
 
   return router;

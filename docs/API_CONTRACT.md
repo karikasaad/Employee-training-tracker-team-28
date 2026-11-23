@@ -1,7 +1,7 @@
 # API Contract: Employee Training Tracker (Team 28)
 
 > **Owner:** Kerolus. This is the agreement every service and frontend page is built against. Change it only through a pull request reviewed by the owners of the affected services.
-> **Version:** 1.1 (adds 4.6b `PUT /api/trainings/{id}`). Stack: Node.js 22 + Express, PostgreSQL, Amazon Cognito, S3, Secrets Manager and CloudWatch (simulated on Floci).
+> **Version:** 1.2 (1.1 added 4.6b `PUT /api/trainings/{id}`; 1.2 adds 4.5b `GET /api/teams/{teamId}/summary`). Stack: Node.js 22 + Express, PostgreSQL, Amazon Cognito, S3, Secrets Manager and CloudWatch (simulated on Floci).
 
 ## Contents
 1. [Conventions](#1-conventions-all-services)
@@ -224,6 +224,25 @@ The team view, with **calculated** status.
 - **Query:** `status` is optional: `overdue`, `completed` or `assigned` (case-insensitive). Anything else returns 400.
 - **200:** `[Assignment]` (with `employeeName`), ordered by `dueDate`.
 - **Errors:** 400, 401, 403, 404.
+
+### 4.5b `GET /api/teams/{teamId}/summary`
+
+Per-member counts for the manager's team page. Added in v1.2.
+
+- **Roles:** the manager of `teamId`; Service.
+- **200:**
+
+```json
+{ "teamId": "10000000-0000-4000-8000-000000000001", "teamName": "Operations", "today": "2026-11-23",
+  "totals": { "employees": 4, "assigned": 5, "overdue": 1, "completed": 3, "employeesWithOverdue": 1 },
+  "employees": [ { "employeeId": "20000000-0000-4000-8000-000000000002", "name": "Ahmed Ali", "role": "Employee",
+                   "assigned": 1, "overdue": 1, "completed": 0, "maxDaysOverdue": 10, "nextDueDate": "2026-11-23" } ] }
+```
+
+- **Counts:** they use the same calculated status as 4.5, so they always match that list. `assigned` = open and not overdue.
+- `nextDueDate` is the earliest due date that is not overdue yet (`null` if there is none).
+- **Order:** most overdue items first, then the longest overdue, then by name. Members with no assignments appear with zeros.
+- **Errors:** 400, 401, 403 (Employee, or the manager of another team), 404.
 
 ### 4.6 `POST /api/trainings`
 

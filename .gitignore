@@ -1,0 +1,46 @@
+# EN: files git must NEVER track. Secrets and generated files stay on your own machine.
+# Franco: files elly git mayetrafe3sh abadan. El secrets w el generated files bet-fedal 3ala gehazak bas.
+
+# secrets / local settings (only .env.example is committed, with dummy values)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+certs/
+secrets/
+infra/floci/cognito/cognito.generated.env
+
+# dependencies and build output
+node_modules/
+coverage/
+.nyc_output/
+dist/
+
+# logs
+*.log
+npm-debug.log*
+
+# local data
+floci-data/
+pgdata/
+data/
+*.sqlite
+*.db
+*.dump
+
+# python (the Floci helper scripts)
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
+
+# editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

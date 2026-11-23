@@ -70,6 +70,16 @@ function createRepo(db) {
     );
   }
 
+  // EN: the flags that are still OPEN (resolved_at is empty) for these employees.
+  // Franco: el flags elly lessa OPEN (resolved_at fady) le el mowazzafeen dool.
+  function openFlags(employeeIds) {
+    return db.query(
+      `SELECT employee_id, training_id, flag_type, raised_at FROM compliance_flags
+       WHERE employee_id = ANY($1::uuid[]) AND resolved_at IS NULL`,
+      [employeeIds],
+    );
+  }
+
   // EN: edit the dates and texts, but ONLY while the certificate is still Pending. The "Pending" check is
   //     inside the UPDATE itself, so two requests at the same time cannot both succeed after a decision.
   //     Returns the new row, or null when it was not Pending (the route answers 409).
@@ -131,7 +141,7 @@ function createRepo(db) {
     return db.query(AUDIT_SQL, [actorId, action, certificateId, ip || null, result]);
   }
 
-  return { insertCertificate, listByEmployee, findById, listByEmployees, updateIfPending, decide, softDelete, audit };
+  return { insertCertificate, listByEmployee, findById, listByEmployees, openFlags, updateIfPending, decide, softDelete, audit };
 }
 
 module.exports = { createRepo, CERTIFICATE_COLUMNS };

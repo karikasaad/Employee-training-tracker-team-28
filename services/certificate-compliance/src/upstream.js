@@ -53,6 +53,9 @@ function createUpstream({
     getEmployee: (id, ctx) => get(`/api/employees/${enc(id)}`, ctx, 'Employee not found'),
     // EN: the teams this caller manages, and the employees of one team (403/404 come from S1).
     // Franco: el teams elly el caller modeerha, w mowazzafeen team wa7da (403/404 gayeen men S1).
+    // EN: the team's COMPLETED assignments (each one says if its training requires a certificate).
+    // Franco: el assignments el COMPLETED bta3et el team (kol wa7da beteqool el training me7taga certificate wala la2).
+    getTeamCompletedAssignments: (teamId, ctx) => get(`/api/teams/${enc(teamId)}/assignments?status=completed`, ctx, 'Team not found'),
     getTeams: (ctx) => get('/api/teams', ctx, 'Team not found'),
     getTeamEmployees: (teamId, ctx) => get(`/api/teams/${enc(teamId)}/employees`, ctx, 'Team not found'),
   };

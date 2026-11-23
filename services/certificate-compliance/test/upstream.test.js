@@ -48,3 +48,10 @@ test('getEmployee, getTeams and getTeamEmployees call the right S1 paths and pas
   await assert.rejects(createUpstream({ fetchImpl: status(403) }).getTeamEmployees('x', ctx), (e) => e.status === 403);
   await assert.rejects(createUpstream({ fetchImpl: status(404) }).getTeamEmployees('x', ctx), (e) => e.status === 404);
 });
+
+test('getTeamCompletedAssignments asks S1 for status=completed', async () => {
+  let url;
+  const up = createUpstream({ s1Url: 'http://s1:5001', fetchImpl: async (u) => { url = u; return ok([])(); } });
+  await up.getTeamCompletedAssignments('10000000-0000-4000-8000-000000000001', { token: 't', requestId: 'r' });
+  assert.strictEqual(url, 'http://s1:5001/api/teams/10000000-0000-4000-8000-000000000001/assignments?status=completed');
+});

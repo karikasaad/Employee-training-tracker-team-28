@@ -15,6 +15,7 @@ const { createUpstream } = require('./upstream');
 const { createCertificatesRouter } = require('./routes/certificates');
 const { createManageRouter } = require('./routes/manage');
 const { createReviewRouter } = require('./routes/review');
+const { createComplianceRouter } = require('./routes/compliance');
 const { createAccess } = require('./access');
 
 // EN: the database pool is created on first use. It logs in with DB_USER / DB_PASSWORD from the
@@ -70,6 +71,7 @@ function createApp(deps = {}) {
   const storage = deps.storage || createStorage();
   const today = deps.today || utcToday;
   const access = createAccess({ upstream, repo });
+  const now = deps.now || (() => new Date());
 
   const app = express();
   app.disable('x-powered-by'); // EN: do not advertise the framework / Franco: mate2olsh en da Express
@@ -88,6 +90,7 @@ function createApp(deps = {}) {
   app.use(createCertificatesRouter({ auth, upstream, storage, repo, today }));
   app.use(createManageRouter({ auth, upstream, repo, access, today }));
   app.use(createReviewRouter({ auth, repo, access, storage, today }));
+  app.use(createComplianceRouter({ auth, upstream, repo, access, today, now }));
 
   app.use(notFoundHandler);
   app.use(errorHandler(logger)); // EN: must be last / Franco: lazem yeb2a akher wa7ed

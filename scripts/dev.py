@@ -105,10 +105,13 @@ def cmd_test():
     for svc in SERVICES:
         folder = ROOT / "services" / svc
         print(f"\n=== tests: {svc} ===")
-        # EN: mount the whole "services" folder, because every service requires ../../common.
-        # Franco: bnerkeb folder "services" kollo 3ashan kol service betesta3mel ../../common.
+        # EN: mount the whole "services" folder, because every service requires ../../common. The "frontend"
+        #     folder is mounted too: some tests check the plain JS helpers of the pages (e.g. frontend/s1).
+        # Franco: bnerkeb folder "services" kollo 3ashan kol service betesta3mel ../../common. W folder "frontend"
+        #     kaman, 3ashan fe tests betet-check helpers el pages (zay frontend/s1).
         code = run([
             "docker", "run", "--rm", "-v", f"{ROOT / 'services'}:/app/services",
+            "-v", f"{ROOT / 'frontend'}:/app/frontend",
             "-w", f"/app/services/{svc}", "node:20-alpine",
             "sh", "-c", "npm install --no-audit --no-fund && npm test",
         ])

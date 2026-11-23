@@ -50,7 +50,7 @@ const tokens = {
 //     Mel-lef bel createDb el 7a2i2i, f qawa3ed "mafeesh quotes fel SQL" betesh-taghal fel tests kaman.
 function createFakePool() {
   const calls = [];
-  const pool = { calls, failInsert: false, selectRows: [], updateRows: [] };
+  const pool = { calls, failInsert: false, selectRows: [], flagRows: [], updateRows: [] };
   const run = async (sql, params = []) => {
     calls.push({ sql, params });
     if (/^\s*INSERT INTO certificates/i.test(sql)) {
@@ -66,7 +66,7 @@ function createFakePool() {
     }
     // EN: any SELECT answers with the rows the test put in pool.selectRows.
     // Franco: ay SELECT beyrod bel rows elly el test 7atta fe pool.selectRows.
-    if (/^\s*SELECT/i.test(sql)) return { rows: pool.selectRows };
+    if (/^\s*SELECT/i.test(sql)) return { rows: /FROM compliance_flags/i.test(sql) ? pool.flagRows : pool.selectRows };
     // EN: UPDATE ... RETURNING answers with pool.updateRows ([] = no row matched, e.g. not Pending any more).
     // Franco: UPDATE ... RETURNING beyrod b pool.updateRows ([] = mafeesh satr etatabaq, masalan mesh Pending khalas).
     if (/^\s*UPDATE/i.test(sql)) return { rows: pool.updateRows };
@@ -116,12 +116,14 @@ const DIRECTORY = [
 const TEAMS = [{ id: IDS.OPS, managerId: IDS.MONA }, { id: IDS.LAB, managerId: IDS.OMAR }];
 
 function createFakeUpstream() {
-  const up = { calls: [], meError: null, trainingError: null, teamsError: null };
+  const up = { calls: [], meError: null, trainingError: null, teamsError: null, assignments: [], assignmentsError: null };
   // EN: who is calling? Read the "sub" from the (already verified) test token.
   // Franco: meen beyeklem? Bn2ra el "sub" men el test token.
   const callerOf = (ctx) => {
-    const sub = JSON.parse(Buffer.from(ctx.token.split('.')[1], 'base64url').toString('utf8')).sub;
-    return DIRECTORY.find((p) => p.sub === sub);
+    const payload = JSON.parse(Buffer.from(ctx.token.split('.')[1], 'base64url').toString('utf8'));
+    // EN: the Service token (client-credentials) is a job, not a person. / Franco: Service token = job, mesh shakhs.
+    if (payload.client_id === SERVICE_CLIENT) return { id: 'service', role: 'Service' };
+    return DIRECTORY.find((p) => p.sub === payload.sub);
   };
   up.getMe = async (ctx) => {
     up.calls.push({ name: 'getMe', ctx });
@@ -148,6 +150,7 @@ function createFakeUpstream() {
     up.calls.push({ name: 'getTeams', ctx });
     if (up.teamsError) throw up.teamsError;
     const me = callerOf(ctx);
+    if (me.role === 'Service') return TEAMS;
     if (me.role !== 'Manager') throw forbidden('Managers only');
     return TEAMS.filter((t) => t.managerId === me.id);
   };
@@ -156,8 +159,13 @@ function createFakeUpstream() {
     const me = callerOf(ctx);
     const team = TEAMS.find((t) => t.id === teamId);
     if (!team) throw notFound('Team not found');
-    if (team.managerId !== me.id) throw forbidden('You are not the manager of this team');
+    if (me.role !== 'Service' && team.managerId !== me.id) throw forbidden('You are not the manager of this team');
     return DIRECTORY.filter((p) => p.teamId === teamId);
+  };
+  up.getTeamCompletedAssignments = async (teamId, ctx) => {
+    up.calls.push({ name: 'getTeamCompletedAssignments', teamId, ctx });
+    if (up.assignmentsError) throw up.assignmentsError;
+    return up.assignments;
   };
   return up;
 }
@@ -169,7 +177,7 @@ async function startApp() {
   const upstream = createFakeUpstream();
   const logs = [];
   const logger = { debug() {}, info: (e, f) => logs.push({ e, f }), warn: (e, f) => logs.push({ e, f }), error: (e, f) => logs.push({ e, f }) };
-  const app = createApp({ db: createDb({ pool }), authOptions, upstream, storage, logger, today: () => TODAY });
+  const app = createApp({ db: createDb({ pool }), authOptions, upstream, storage, logger, today: () => TODAY, now: () => new Date(`${TODAY}T12:00:00.000Z`) });
   const server = await new Promise((resolve) => { const s = app.listen(0, () => resolve(s)); });
   const url = `http://127.0.0.1:${server.address().port}`;
   return { url, pool, storage, upstream, logs, close: () => new Promise((resolve) => server.close(resolve)) };

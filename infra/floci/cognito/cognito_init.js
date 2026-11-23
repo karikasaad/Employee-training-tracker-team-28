@@ -240,10 +240,15 @@ function checkSignIn(clientId, rows) {
   return null;
 }
 
-function checkJwks(issuer) {
-  const r = spawnSync(process.execPath, ['-e', `fetch(${JSON.stringify(`${issuer}/.well-known/jwks.json`)}).then(r=>r.json()).then(j=>console.log((j.keys||[]).length)).catch(e=>{console.error(e.message);process.exit(1)})`], { encoding: 'utf8' });
+// EN: the token's issuer may say http://floci:4566/... : "floci" is a name that only exists INSIDE Docker
+//     (the services use it). From this PC we reach the same Floci through the host endpoint (localhost:4566).
+// Franco: el issuer fel token momken ye2ool http://floci:4566/... : "floci" esm mawgood GOWWA Docker bas
+//     (el services betesta3melo). Men el PC da benewsal le nafs Floci 3an taree2 localhost:4566.
+function checkJwks(issuer, poolId) {
+  const url = `${endpoint}/${poolId}/.well-known/jwks.json`;
+  const r = spawnSync(process.execPath, ['-e', `fetch(${JSON.stringify(url)}).then(r=>r.json()).then(j=>console.log((j.keys||[]).length)).catch(e=>{console.error(e.message);process.exit(1)})`], { encoding: 'utf8' });
   record('JWKS endpoint (public keys for signature check)', r.status === 0 && Number(r.stdout) > 0 ? 'Works' : 'Not supported',
-    r.status === 0 ? `${r.stdout.trim()} key(s) at ${issuer}/.well-known/jwks.json` : r.stderr.trim());
+    r.status === 0 ? `${r.stdout.trim()} key(s) at ${url} (services inside Docker use ${issuer}/.well-known/jwks.json)` : r.stderr.trim());
 }
 
 // ------------------------------------------------------------------ output
@@ -284,7 +289,7 @@ function main() {
   const svc = ensureServiceClient(poolId); serviceClientOut = svc && svc.clientId;
   const rows = provisionUsers(poolId);
   issuerOut = checkSignIn(webClientOut, rows);
-  if (issuerOut) checkJwks(issuerOut);
+  if (issuerOut) checkJwks(issuerOut, poolId);
   finish(0);
 }
 

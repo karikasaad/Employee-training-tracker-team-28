@@ -48,7 +48,7 @@ function createRepo(db) {
   // Franco: certificate wa7ed bel id. El certificate el mem7eyya (deleted_at) beyetsama mesh mawgood.
   function findById(id) {
     return db.queryOne(
-      `SELECT ${CERTIFICATE_COLUMNS} FROM certificates WHERE id = $1 AND deleted_at IS NULL`,
+      `SELECT ${CERTIFICATE_COLUMNS}, s3_key FROM certificates WHERE id = $1 AND deleted_at IS NULL`,
       [id],
     );
   }
@@ -91,6 +91,26 @@ function createRepo(db) {
     });
   }
 
+  // EN: the manager's decision: Verified or Rejected. Like the edit, the "still Pending" check is inside the
+  //     UPDATE, so a certificate can be decided only once. Returns the new row, or null (the route answers 409).
+  // Franco: qarar el manager: Verified aw Rejected. Zay el edit, check "lessa Pending" gowwa el UPDATE, f el
+  //     certificate yetqarar feeh mara wa7da bas. Beyrga3 el satr el gedeed, aw null (el route beyrod 409).
+  function decide(id, decision, reason, actorId, ip) {
+    const status = decision === 'verify' ? 'Verified' : 'Rejected';
+    return db.withTransaction(async (tx) => {
+      const row = await tx.queryOne(
+        `UPDATE certificates
+         SET review_status = $2, verified_by = $3, verified_at = now(), reject_reason = $4
+         WHERE id = $1 AND review_status = $5 AND deleted_at IS NULL
+         RETURNING ${CERTIFICATE_COLUMNS}`,
+        [id, status, actorId, reason, 'Pending'],
+      );
+      if (!row) return null;
+      await tx.query(AUDIT_SQL, [actorId, decision, id, ip || null, 'success']);
+      return row;
+    });
+  }
+
   // EN: soft delete: the row stays (audit trail), only deleted_at is set. Returns false if already deleted.
   // Franco: soft delete: el satr beyefdal (3ashan el audit), deleted_at bas beyetsagal. Beyrga3 false law etmasa7 abl keda.
   function softDelete(id, actorId, ip) {
@@ -111,7 +131,7 @@ function createRepo(db) {
     return db.query(AUDIT_SQL, [actorId, action, certificateId, ip || null, result]);
   }
 
-  return { insertCertificate, listByEmployee, findById, listByEmployees, updateIfPending, softDelete, audit };
+  return { insertCertificate, listByEmployee, findById, listByEmployees, updateIfPending, decide, softDelete, audit };
 }
 
 module.exports = { createRepo, CERTIFICATE_COLUMNS };

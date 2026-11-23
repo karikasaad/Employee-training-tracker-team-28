@@ -11,6 +11,9 @@ x-service-env: &service-env
   AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-test}
   AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-test}
   CERTIFICATES_BUCKET: ${CERTIFICATES_BUCKET:-certificates}
+  # EN: the S3 address the BROWSER can reach (download links); inside Docker the services use AWS_ENDPOINT_URL.
+  # Franco: 3enwan S3 elly el BROWSER yeqdar yewsal leh (links el download); gowwa Docker el services bet-estakhdem AWS_ENDPOINT_URL.
+  S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:4566}
   DB_HOST: ${DB_HOST:-postgres}
   DB_PORT: ${DB_PORT:-5432}
   DB_NAME: ${POSTGRES_DB:-ett}

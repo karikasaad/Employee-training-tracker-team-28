@@ -23,4 +23,9 @@ function detectMimeType(buffer) {
   return null;
 }
 
-module.exports = { detectMimeType };
+// EN: the download file name is built from OUR id and this extension, never from the user's file name.
+// Franco: esm el file fel download bne3melo men el id bta3na w el extension di, 3omro ma yeb2a esm el user.
+const EXTENSIONS = { 'application/pdf': '.pdf', 'image/jpeg': '.jpg', 'image/png': '.png' };
+const extensionOf = (mimeType) => EXTENSIONS[mimeType] || '';
+
+module.exports = { detectMimeType, extensionOf };

@@ -27,12 +27,45 @@ function createStorage({ client = null, bucket = process.env.CERTIFICATES_BUCKET
     await getClient().send(new PutObjectCommand({ Bucket: bucket, Key: key, Body: body, ContentType: contentType }));
   }
 
+  // EN: the client for download links. It signs with the PUBLIC address (S3_PUBLIC_ENDPOINT), because the
+  //     browser must open the link and cannot reach the Docker name "floci". Signing is offline: no call is made.
+  // Franco: client el links bta3et el download. Beyewa22a3 bel 3enwan el PUBLIC (S3_PUBLIC_ENDPOINT) 3ashan el
+  //     browser lazem yeftah el link w mayeqdarsh yewsal le esm Docker "floci". El tawqee3 offline: mafeesh call.
+  let signer = client;
+  function getSigner() {
+    if (!signer) {
+      const { S3Client } = require('@aws-sdk/client-s3');
+      signer = new S3Client({
+        region: process.env.AWS_DEFAULT_REGION || 'us-east-1',
+        endpoint: process.env.S3_PUBLIC_ENDPOINT || process.env.AWS_ENDPOINT_URL || undefined,
+        forcePathStyle: true,
+      });
+    }
+    return signer;
+  }
+
+  // EN: a pre-signed GET link that works for `expiresIn` seconds and forces a DOWNLOAD (Content-Disposition:
+  //     attachment), so the browser never opens or runs the file. The bucket itself stays private.
+  // Franco: link GET m3a tawqee3 beyeshtaghal le `expiresIn` sanya w beygbor el DOWNLOAD (Content-Disposition:
+  //     attachment), f el browser 3omro ma yeftah aw yshaghal el file. El bucket nafso beyefdal private.
+  async function presignedDownloadUrl(key, { fileName, mimeType, expiresIn }) {
+    const { GetObjectCommand } = require('@aws-sdk/client-s3');
+    const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+    const command = new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      ResponseContentDisposition: `attachment; filename="${fileName}"`,
+      ResponseContentType: mimeType,
+    });
+    return getSignedUrl(getSigner(), command, { expiresIn });
+  }
+
   async function remove(key) {
     const { DeleteObjectCommand } = require('@aws-sdk/client-s3');
     await getClient().send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
   }
 
-  return { put, remove, bucket };
+  return { put, remove, presignedDownloadUrl, bucket };
 }
 
 module.exports = { createStorage };

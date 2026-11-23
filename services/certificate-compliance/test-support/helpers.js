@@ -80,7 +80,13 @@ function createFakePool() {
 // EN: fake file storage: remembers what was stored.
 // Franco: storage fake: beyfakkar eh elly et-khazzen.
 function createFakeStorage() {
-  const storage = { puts: [], removed: [], fail: false };
+  const storage = { puts: [], removed: [], presigns: [], fail: false };
+  // EN: a fake download link; it remembers what it was asked to sign.
+  // Franco: link download fake; beyfakkar eh elly et-talab yewa22a3o.
+  storage.presignedDownloadUrl = async (key, options) => {
+    storage.presigns.push({ key, ...options });
+    return `https://files.test/${key}?X-Amz-Signature=abc123&X-Amz-Expires=${options.expiresIn}`;
+  };
   storage.put = async (key, body, contentType) => {
     if (storage.fail) throw new Error('S3 is down');
     storage.puts.push({ key, body, contentType });

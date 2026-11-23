@@ -64,4 +64,20 @@ const validateUpload = (body) => validateFields(body, true);
 // Franco: JSON bta3 el PUT (mafeesh trainingId, w el file mayenfa3sh yetghayyar).
 const validateUpdate = (body) => validateFields(body, false);
 
-module.exports = { validateUpload, validateUpdate, isRealDate, UUID };
+// EN: PATCH .../verify body: decision is "verify" or "reject"; a rejection needs a reason of 1-500 characters.
+// Franco: body el PATCH .../verify: decision = "verify" aw "reject"; el reject lazem yeb2a leh sabab men 1 le 500 7arf.
+function validateDecision(body) {
+  const problems = [];
+  const decision = body && body.decision;
+  if (decision !== 'verify' && decision !== 'reject') problems.push({ field: 'decision', issue: 'must be verify or reject' });
+  let reason = null;
+  if (decision === 'reject') {
+    const raw = typeof body.reason === 'string' ? body.reason.trim() : '';
+    if (raw.length < 1 || raw.length > 500) problems.push({ field: 'reason', issue: 'is required to reject, 1-500 characters' });
+    else reason = raw;
+  }
+  if (problems.length > 0) throw badRequest('The decision is not valid', problems);
+  return { decision, reason };
+}
+
+module.exports = { validateUpload, validateUpdate, validateDecision, isRealDate, UUID };

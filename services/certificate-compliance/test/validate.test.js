@@ -33,3 +33,12 @@ test('validityOf: 31 days = Valid, 30 days = Expiring soon, today = Expiring soo
   assert.strictEqual(validityOf('2026-11-23', '2026-11-23'), 'Expiring soon');
   assert.strictEqual(validityOf('2026-11-22', '2026-11-23'), 'Expired');
 });
+
+test('validateDecision: verify needs no reason; reject needs 1-500 characters', () => {
+  const { validateDecision } = require('../src/validate');
+  assert.deepStrictEqual(validateDecision({ decision: 'verify', reason: 'ignored' }), { decision: 'verify', reason: null });
+  assert.deepStrictEqual(validateDecision({ decision: 'reject', reason: ' bad scan ' }), { decision: 'reject', reason: 'bad scan' });
+  assert.throws(() => validateDecision({ decision: 'reject' }), (e) => e.status === 400);
+  assert.throws(() => validateDecision({ decision: 'maybe' }), (e) => e.status === 400);
+  assert.throws(() => validateDecision(undefined), (e) => e.status === 400);
+});

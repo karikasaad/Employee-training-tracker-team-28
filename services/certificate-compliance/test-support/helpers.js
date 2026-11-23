@@ -47,7 +47,7 @@ const tokens = {
 //     Mel-lef bel createDb el 7a2i2i, f qawa3ed "mafeesh quotes fel SQL" betesh-taghal fel tests kaman.
 function createFakePool() {
   const calls = [];
-  const pool = { calls, failInsert: false };
+  const pool = { calls, failInsert: false, selectRows: [] };
   const run = async (sql, params = []) => {
     calls.push({ sql, params });
     if (/^\s*INSERT INTO certificates/i.test(sql)) {
@@ -61,6 +61,9 @@ function createFakePool() {
         }],
       };
     }
+    // EN: any SELECT answers with the rows the test put in pool.selectRows.
+    // Franco: ay SELECT beyrod bel rows elly el test 7atta fe pool.selectRows.
+    if (/^\s*SELECT/i.test(sql)) return { rows: pool.selectRows };
     return { rows: [] };
   };
   pool.query = run;

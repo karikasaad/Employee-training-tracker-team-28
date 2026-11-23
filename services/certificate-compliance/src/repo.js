@@ -32,7 +32,18 @@ function createRepo(db) {
     });
   }
 
-  return { insertCertificate };
+  // EN: all NOT deleted certificates of ONE employee, newest first. The employee id is always a parameter.
+  // Franco: kol el certificates (elly mesh mem7eyya) bta3et mowazzaf wa7ed, el ag7ad el awel. El employee id dayman parameter.
+  function listByEmployee(employeeId) {
+    return db.query(
+      `SELECT ${CERTIFICATE_COLUMNS} FROM certificates
+       WHERE employee_id = $1 AND deleted_at IS NULL
+       ORDER BY uploaded_at DESC`,
+      [employeeId],
+    );
+  }
+
+  return { insertCertificate, listByEmployee };
 }
 
 module.exports = { createRepo, CERTIFICATE_COLUMNS };

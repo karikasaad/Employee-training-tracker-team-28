@@ -1,5 +1,5 @@
-// EN: Certificate endpoints of Service 2. This file: POST /api/certificates (upload).
-// Franco: Endpoints el certificates fe Service 2. El file da: POST /api/certificates (upload).
+// EN: Certificate endpoints of Service 2. This file: POST /api/certificates (upload) and GET /api/certificates/me.
+// Franco: Endpoints el certificates fe Service 2. El file da: POST /api/certificates (upload) w GET /api/certificates/me.
 'use strict';
 const crypto = require('node:crypto');
 const express = require('express');
@@ -63,6 +63,24 @@ function createCertificatesRouter({ auth, upstream, storage, repo, today }) {
           throw err;
         }
         return res.status(201).json(toCertificate(row, today()));
+      } catch (err) {
+        return next(err);
+      }
+    },
+  );
+
+  // EN: GET /api/certificates/me: the caller's OWN certificates. There is no id in the URL: the owner is
+  //     found by S1 from the token, so nobody can ask for someone else's list (no IDOR possible here).
+  // Franco: GET /api/certificates/me: el certificates bta3et el caller NAFSOH. Mafeesh id fel URL: S1 beylaqi
+  //     el sa7eb men el token, f ma7adesh yeqdar yesaal 3an list wa7ed tany (mafeesh IDOR hena).
+  router.get(
+    '/api/certificates/me',
+    auth.requireAuth(['Employee', 'Manager']),
+    async (req, res, next) => {
+      try {
+        const me = await upstream.getMe({ token: bearerToken(req), requestId: req.requestId });
+        const rows = await repo.listByEmployee(me.id);
+        return res.json(rows.map((row) => toCertificate(row, today())));
       } catch (err) {
         return next(err);
       }

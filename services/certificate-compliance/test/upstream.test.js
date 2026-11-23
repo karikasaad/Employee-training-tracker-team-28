@@ -32,3 +32,19 @@ test('the id is URL-encoded, so it cannot change the path', async () => {
   await up.getTraining('../teams', { token: 't', requestId: 'r' });
   assert.ok(url.endsWith('/api/trainings/..%2Fteams'));
 });
+
+test('getEmployee, getTeams and getTeamEmployees call the right S1 paths and pass 403/404 on', async () => {
+  const urls = [];
+  const up = createUpstream({ s1Url: 'http://s1:5001', fetchImpl: async (u) => { urls.push(u); return ok([])(); } });
+  const ctx = { token: 't', requestId: 'r' };
+  await up.getEmployee('20000000-0000-4000-8000-000000000002', ctx);
+  await up.getTeams(ctx);
+  await up.getTeamEmployees('10000000-0000-4000-8000-000000000001', ctx);
+  assert.deepStrictEqual(urls, [
+    'http://s1:5001/api/employees/20000000-0000-4000-8000-000000000002',
+    'http://s1:5001/api/teams',
+    'http://s1:5001/api/teams/10000000-0000-4000-8000-000000000001/employees',
+  ]);
+  await assert.rejects(createUpstream({ fetchImpl: status(403) }).getTeamEmployees('x', ctx), (e) => e.status === 403);
+  await assert.rejects(createUpstream({ fetchImpl: status(404) }).getTeamEmployees('x', ctx), (e) => e.status === 404);
+});

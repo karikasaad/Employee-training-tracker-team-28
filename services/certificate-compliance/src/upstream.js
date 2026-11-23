@@ -48,6 +48,13 @@ function createUpstream({
     // Franco: profile el caller nafsoh: beydeena el employeeId elly beyemlek el certificate.
     getMe: (ctx) => get('/api/employees/me', ctx, 'No employee profile exists for this user'),
     getTraining: (trainingId, ctx) => get(`/api/trainings/${enc(trainingId)}`, ctx, 'Training not found'),
+    // EN: an employee (S1 answers only for the employee themself or their team's manager): gives the owner's managerId.
+    // Franco: mowazzaf (S1 beyrod bas lel mowazzaf nafso aw manager el team): beydeena managerId bta3 sa7eb el certificate.
+    getEmployee: (id, ctx) => get(`/api/employees/${enc(id)}`, ctx, 'Employee not found'),
+    // EN: the teams this caller manages, and the employees of one team (403/404 come from S1).
+    // Franco: el teams elly el caller modeerha, w mowazzafeen team wa7da (403/404 gayeen men S1).
+    getTeams: (ctx) => get('/api/teams', ctx, 'Team not found'),
+    getTeamEmployees: (teamId, ctx) => get(`/api/teams/${enc(teamId)}/employees`, ctx, 'Team not found'),
   };
 }
 

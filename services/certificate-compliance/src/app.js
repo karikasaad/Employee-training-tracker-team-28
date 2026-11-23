@@ -13,6 +13,8 @@ const { createRepo } = require('./repo');
 const { createStorage } = require('./storage');
 const { createUpstream } = require('./upstream');
 const { createCertificatesRouter } = require('./routes/certificates');
+const { createManageRouter } = require('./routes/manage');
+const { createAccess } = require('./access');
 
 // EN: the database pool is created on first use. It logs in with DB_USER / DB_PASSWORD from the
 //     environment, which must be S2's own least-privilege role svc_s2 (never the admin user).
@@ -66,6 +68,7 @@ function createApp(deps = {}) {
   const upstream = deps.upstream || createUpstream();
   const storage = deps.storage || createStorage();
   const today = deps.today || utcToday;
+  const access = createAccess({ upstream, repo });
 
   const app = express();
   app.disable('x-powered-by'); // EN: do not advertise the framework / Franco: mate2olsh en da Express
@@ -82,6 +85,7 @@ function createApp(deps = {}) {
   });
 
   app.use(createCertificatesRouter({ auth, upstream, storage, repo, today }));
+  app.use(createManageRouter({ auth, upstream, repo, access, today }));
 
   app.use(notFoundHandler);
   app.use(errorHandler(logger)); // EN: must be last / Franco: lazem yeb2a akher wa7ed

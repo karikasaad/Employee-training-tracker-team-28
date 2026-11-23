@@ -19,7 +19,7 @@ function isRealDate(text) {
 //     employeeId is NOT read here: the owner of the certificate always comes from the token.
 // Franco: bey-validate el fields w beyrga3 values nadeefa. Beyrmy 400 m3a lestet el moshkelat.
 //     employeeId mabnoo2raash hena: sa7eb el certificate dayman gai men el token.
-function validateUpload(body) {
+function validateFields(body, withTraining) {
   const problems = [];
   const text = (field, min, max, required) => {
     const raw = body[field];
@@ -39,7 +39,9 @@ function validateUpload(body) {
     return raw;
   };
 
-  const trainingId = text('trainingId', 1, 36, true);
+  // EN: only the upload has a trainingId; an update cannot move a certificate to another training.
+  // Franco: el upload bas feeh trainingId; el update mayenfa3sh yenaqqel el certificate le training tanya.
+  const trainingId = withTraining ? text('trainingId', 1, 36, true) : null;
   if (trainingId && !UUID.test(trainingId)) problems.push({ field: 'trainingId', issue: 'must be a UUID' });
   const title = text('title', 1, 150, true);
   const issuer = text('issuer', 1, 150, true);
@@ -51,7 +53,15 @@ function validateUpload(body) {
   if (issueDate && expiryDate && issueDate > expiryDate) problems.push({ field: 'issueDate', issue: 'must not be after expiryDate' });
 
   if (problems.length > 0) throw badRequest('The certificate data is not valid', problems);
-  return { trainingId: trainingId.toLowerCase(), title, issuer, certificateNumber, issueDate, expiryDate };
+  const clean = { title, issuer, certificateNumber, issueDate, expiryDate };
+  if (withTraining) clean.trainingId = trainingId.toLowerCase();
+  return clean;
 }
 
-module.exports = { validateUpload, isRealDate };
+// EN: POST /api/certificates form fields (with trainingId). / Franco: fields el form bta3 el upload (m3a trainingId).
+const validateUpload = (body) => validateFields(body, true);
+// EN: PUT /api/certificates/{id} JSON body (no trainingId, the file cannot change).
+// Franco: JSON bta3 el PUT (mafeesh trainingId, w el file mayenfa3sh yetghayyar).
+const validateUpdate = (body) => validateFields(body, false);
+
+module.exports = { validateUpload, validateUpdate, isRealDate, UUID };

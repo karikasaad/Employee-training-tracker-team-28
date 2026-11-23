@@ -8,7 +8,7 @@
 const crypto = require('node:crypto');
 const { createApp } = require('../src/app');
 const { createDb } = require('../../common/db');
-const { notFound, upstreamUnavailable } = require('../../common/errors');
+const { notFound, forbidden, upstreamUnavailable } = require('../../common/errors');
 
 const EMPLOYEE_ID = '20000000-0000-4000-8000-000000000002';
 const TRAINING_ID = '30000000-0000-4000-8000-000000000001';
@@ -35,7 +35,10 @@ function token({ sub = 'sub-ahmed', groups = ['Employee'], clientId = WEB_CLIENT
 }
 const tokens = {
   employee: () => token(),
+  sara: () => token({ sub: 'sub-sara' }),
   manager: () => token({ sub: 'sub-mona', groups: ['Manager'] }),
+  mona: () => token({ sub: 'sub-mona', groups: ['Manager'] }),
+  omar: () => token({ sub: 'sub-omar', groups: ['Manager'] }),
   service: () => token({ sub: 'sub-jobs', groups: [], clientId: SERVICE_CLIENT }),
   expired: () => token({ expInSec: -60 }),
 };
@@ -47,7 +50,7 @@ const tokens = {
 //     Mel-lef bel createDb el 7a2i2i, f qawa3ed "mafeesh quotes fel SQL" betesh-taghal fel tests kaman.
 function createFakePool() {
   const calls = [];
-  const pool = { calls, failInsert: false, selectRows: [] };
+  const pool = { calls, failInsert: false, selectRows: [], updateRows: [] };
   const run = async (sql, params = []) => {
     calls.push({ sql, params });
     if (/^\s*INSERT INTO certificates/i.test(sql)) {
@@ -64,6 +67,9 @@ function createFakePool() {
     // EN: any SELECT answers with the rows the test put in pool.selectRows.
     // Franco: ay SELECT beyrod bel rows elly el test 7atta fe pool.selectRows.
     if (/^\s*SELECT/i.test(sql)) return { rows: pool.selectRows };
+    // EN: UPDATE ... RETURNING answers with pool.updateRows ([] = no row matched, e.g. not Pending any more).
+    // Franco: UPDATE ... RETURNING beyrod b pool.updateRows ([] = mafeesh satr etatabaq, masalan mesh Pending khalas).
+    if (/^\s*UPDATE/i.test(sql)) return { rows: pool.updateRows };
     return { rows: [] };
   };
   pool.query = run;
@@ -83,20 +89,69 @@ function createFakeStorage() {
   return storage;
 }
 
-// EN: fake S1: knows one training; the caller's profile is Ahmed.
-// Franco: S1 fake: 3arfa training wa7da; profile el caller = Ahmed.
+// EN: fake S1. It knows two teams and four people and answers like the real S1: an employee may only look
+//     at themself, a manager only at their own team (403 otherwise), unknown ids give 404.
+// Franco: S1 fake. Ya3raf team-een w 4 nas w beyrod zay S1 el 7a2i2i: el mowazzaf yeshoof nafso bas, w el
+//     manager team-o bas (3'er keda 403), w id mesh mawgood yedy 404.
+const IDS = {
+  OPS: '10000000-0000-4000-8000-000000000001',
+  LAB: '10000000-0000-4000-8000-000000000002',
+  MONA: '20000000-0000-4000-8000-000000000001', // manager of Operations
+  AHMED: '20000000-0000-4000-8000-000000000002',
+  SARA: '20000000-0000-4000-8000-000000000003',
+  OMAR: '20000000-0000-4000-8000-000000000005', // manager of Laboratory
+};
+const DIRECTORY = [
+  { sub: 'sub-mona', id: IDS.MONA, name: 'Mona Hassan', teamId: IDS.OPS, managerId: IDS.MONA, role: 'Manager' },
+  { sub: 'sub-ahmed', id: IDS.AHMED, name: 'Ahmed Ali', teamId: IDS.OPS, managerId: IDS.MONA, role: 'Employee' },
+  { sub: 'sub-sara', id: IDS.SARA, name: 'Sara Samir', teamId: IDS.OPS, managerId: IDS.MONA, role: 'Employee' },
+  { sub: 'sub-omar', id: IDS.OMAR, name: 'Omar Fathy', teamId: IDS.LAB, managerId: IDS.OMAR, role: 'Manager' },
+];
+const TEAMS = [{ id: IDS.OPS, managerId: IDS.MONA }, { id: IDS.LAB, managerId: IDS.OMAR }];
+
 function createFakeUpstream() {
-  const up = { calls: [], meError: null, trainingError: null };
+  const up = { calls: [], meError: null, trainingError: null, teamsError: null };
+  // EN: who is calling? Read the "sub" from the (already verified) test token.
+  // Franco: meen beyeklem? Bn2ra el "sub" men el test token.
+  const callerOf = (ctx) => {
+    const sub = JSON.parse(Buffer.from(ctx.token.split('.')[1], 'base64url').toString('utf8')).sub;
+    return DIRECTORY.find((p) => p.sub === sub);
+  };
   up.getMe = async (ctx) => {
     up.calls.push({ name: 'getMe', ctx });
     if (up.meError) throw up.meError;
-    return { id: EMPLOYEE_ID, name: 'Ahmed Ali' };
+    const me = callerOf(ctx);
+    if (!me) throw notFound('No employee profile exists for this user');
+    return me;
   };
   up.getTraining = async (id, ctx) => {
     up.calls.push({ name: 'getTraining', id, ctx });
     if (up.trainingError) throw up.trainingError;
     if (id !== TRAINING_ID) throw notFound('Training not found');
     return { id, name: 'Fire Safety' };
+  };
+  up.getEmployee = async (id, ctx) => {
+    up.calls.push({ name: 'getEmployee', id, ctx });
+    const me = callerOf(ctx);
+    const target = DIRECTORY.find((p) => p.id === id);
+    if (!target) throw notFound('Employee not found');
+    if (target.id !== me.id && target.managerId !== me.id) throw forbidden('You are not allowed to see this employee');
+    return target;
+  };
+  up.getTeams = async (ctx) => {
+    up.calls.push({ name: 'getTeams', ctx });
+    if (up.teamsError) throw up.teamsError;
+    const me = callerOf(ctx);
+    if (me.role !== 'Manager') throw forbidden('Managers only');
+    return TEAMS.filter((t) => t.managerId === me.id);
+  };
+  up.getTeamEmployees = async (teamId, ctx) => {
+    up.calls.push({ name: 'getTeamEmployees', teamId, ctx });
+    const me = callerOf(ctx);
+    const team = TEAMS.find((t) => t.id === teamId);
+    if (!team) throw notFound('Team not found');
+    if (team.managerId !== me.id) throw forbidden('You are not the manager of this team');
+    return DIRECTORY.filter((p) => p.teamId === teamId);
   };
   return up;
 }
@@ -141,6 +196,6 @@ async function upload(ctx, { file = PDF_BYTES, fileName = 'cert.pdf', fileType =
 }
 
 module.exports = {
-  EMPLOYEE_ID, TRAINING_ID, TODAY, tokens, startApp, upload, createFakePool, upstreamUnavailable,
+  EMPLOYEE_ID, TRAINING_ID, TODAY, IDS, tokens, startApp, upload, createFakePool, upstreamUnavailable,
   PDF_BYTES, PNG_BYTES, JPEG_BYTES, GOOD_FIELDS,
 };

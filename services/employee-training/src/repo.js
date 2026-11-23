@@ -5,6 +5,7 @@
 //     telmes teams w employees w trainings w assignments bas. Kol query bet-3ady 3ala services/common/db.js,
 //     f el values dayman betemshi ka parameters $1, $2... (mafeesh SQL injection).
 'use strict';
+const { calculateStatus, daysOverdue } = require('./rules');
 
 // ---------------------------------------------------------------- employees + teams
 // EN: one employee with the team name and the team's manager (needed for the Employee JSON shape).
@@ -59,8 +60,85 @@ function toTraining(r) {
   };
 }
 
+// ---------------------------------------------------------------- assignments
+// EN: due_date is read as text ("YYYY-MM-DD") so no time zone can shift the day.
+// Franco: due_date bet-et2ery ka text ("YYYY-MM-DD") 3ashan mafeesh time zone ye7arrak el yom.
+const ASSIGNMENT_COLUMNS = `
+  SELECT a.id, a.employee_id, e.name AS employee_name, a.training_id, t.name AS training_name,
+         t.category, t.requires_certificate, a.assigned_by, a.assigned_at,
+         a.due_date::text AS due_date, a.completed_at, a.renewal_of_id
+    FROM assignments a
+    JOIN employees e ON e.id = a.employee_id
+    JOIN trainings t ON t.id = a.training_id`;
+
+// EN: open ones first (by due date), then completed ones (newest first).
+// Franco: el maftoo7a el awel (bel due date), ba3den elly khelset (el a7das el awel).
+const ASSIGNMENT_ORDER = `
+  ORDER BY (a.completed_at IS NOT NULL), a.due_date, a.completed_at DESC, t.name`;
+
+// EN: database row -> Assignment JSON (contract section 3). status and daysOverdue are CALCULATED here
+//     from today's UTC date with the rules in rules.js; they are never stored.
+// Franco: row el database -> Assignment JSON. status w daysOverdue BET-ET7SEB hena men tareekh el
+//     naharda bel UTC b rules.js; 3omrhom ma byetkhazzano.
+function toAssignment(r, today) {
+  const completedAt = r.completed_at ? new Date(r.completed_at).toISOString() : null;
+  return {
+    id: r.id,
+    employeeId: r.employee_id,
+    employeeName: r.employee_name,
+    trainingId: r.training_id,
+    trainingName: r.training_name,
+    category: r.category,
+    requiresCertificate: r.requires_certificate,
+    assignedBy: r.assigned_by,
+    assignedAt: new Date(r.assigned_at).toISOString(),
+    dueDate: r.due_date,
+    completedAt,
+    status: calculateStatus(r.due_date, completedAt, today),
+    daysOverdue: daysOverdue(r.due_date, completedAt, today),
+    renewalOfId: r.renewal_of_id,
+  };
+}
+
 function createRepo(db) {
   return {
+    // ------------------------------------------------------------ assignments
+    // EN: insert one assignment. If the employee already has an OPEN one of this training, the partial
+    //     unique index refuses it: ON CONFLICT DO NOTHING returns no row and we return null (-> 409 / skipped).
+    // Franco: ndakhal assignment wa7ed. Law el mowazzaf 3ando wa7ed MAFTOO7 le nafs el training, el index
+    //     beyrfod: ON CONFLICT DO NOTHING mabyrga3sh row w benrga3 null (-> 409 aw skipped).
+    async insertAssignment({ employeeId, trainingId, assignedBy, dueDate, renewalOfId = null }, dbOrTx = db) {
+      const row = await dbOrTx.queryOne(`
+        INSERT INTO assignments (employee_id, training_id, assigned_by, due_date, renewal_of_id)
+        VALUES ($1, $2, $3, $4, $5)
+        ON CONFLICT (employee_id, training_id) WHERE completed_at IS NULL DO NOTHING
+        RETURNING id`, [employeeId, trainingId, assignedBy, dueDate, renewalOfId]);
+      return row ? row.id : null;
+    },
+
+    async getAssignment(id, today, dbOrTx = db) {
+      const row = await dbOrTx.queryOne(`${ASSIGNMENT_COLUMNS} WHERE a.id = $1`, [id]);
+      return row ? toAssignment(row, today) : null;
+    },
+
+    async getAssignmentsByIds(ids, today, dbOrTx = db) {
+      if (ids.length === 0) return [];
+      const rows = await dbOrTx.query(`${ASSIGNMENT_COLUMNS} WHERE a.id = ANY($1::uuid[]) ${ASSIGNMENT_ORDER}`, [ids]);
+      return rows.map((r) => toAssignment(r, today));
+    },
+
+    async listAssignmentsOfEmployee(employeeId, today) {
+      const rows = await db.query(`${ASSIGNMENT_COLUMNS} WHERE a.employee_id = $1 ${ASSIGNMENT_ORDER}`, [employeeId]);
+      return rows.map((r) => toAssignment(r, today));
+    },
+
+    async listAssignmentsOfTeam(teamId, today) {
+      const rows = await db.query(`${ASSIGNMENT_COLUMNS} WHERE e.team_id = $1 ${ASSIGNMENT_ORDER}`, [teamId]);
+      return rows.map((r) => toAssignment(r, today));
+    },
+
+    withTransaction: (work) => db.withTransaction(work),
+
     // ------------------------------------------------------------ trainings
     async createTraining({ name, category, requiresCertificate, validityMonths, createdBy }) {
       const row = await db.queryOne(`
@@ -132,4 +210,4 @@ function createRepo(db) {
   };
 }
 
-module.exports = { createRepo, toEmployee, toTeam, toTraining };
+module.exports = { createRepo, toEmployee, toTeam, toTraining, toAssignment };

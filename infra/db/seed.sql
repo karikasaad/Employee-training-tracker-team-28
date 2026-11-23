@@ -1,8 +1,8 @@
 -- EN: Test data for development and the demo. It WIPES all tables first, so never run it on real data.
---     Dates are relative to CURRENT_DATE, so "overdue", "due today" and "expiring soon" stay true on any
+--     Dates are relative to today's UTC date, so "overdue", "due today" and "expiring soon" stay true on any
 --     day we run it. Fixed UUIDs make the ids easy to recognise in tests and in the API contract.
 -- Franco: Data tagrebeya lel development w el demo. Bet-masa7 kol el gedawel el awel, f matshaghalhash
---     3ala data 7a2i2eya abadan. El tawareekh mansooba le CURRENT_DATE, f "overdue" w "due today" w
+--     3ala data 7a2i2eya abadan. El tawareekh mansooba le el naharda (UTC), f "overdue" w "due today" w
 --     "expiring soon" yefdalo sa7 ay yom. El UUIDs sabta 3ashan nemayezha fel tests w el contract.
 -- EN: Cognito users are created afterwards by infra/floci/cognito (same e-mails); it writes each user's
 --     "sub" into employees.cognito_sub.
@@ -47,9 +47,11 @@ INSERT INTO trainings (id, name, category, requires_certificate, validity_months
  ('30000000-0000-4000-8000-000000000008', 'Manual Handling',                'Safety',     false, NULL, '20000000-0000-4000-8000-000000000001');
 
 -- ---------------------------------------------------------------- assignments (S1), every state
--- EN: helper: a completed_at timestamp N days ago at 09:00 UTC.
--- Franco: helper: completed_at men N ayyam el sa3a 9 el sob7 UTC.
-CREATE TEMP TABLE d AS SELECT CURRENT_DATE AS today;
+-- EN: "today" = the UTC date, the same "today" the API rules use (CURRENT_DATE would follow the server's
+--     time zone and could be one day off late in the evening in Cairo).
+-- Franco: "el naharda" = tareekh UTC, nafs "el naharda" elly rules el API betesta3melo (CURRENT_DATE
+--     beymshi ma3 time zone el server w momken yefre2 yom bel leil fe Masr).
+CREATE TEMP TABLE d AS SELECT (now() AT TIME ZONE 'UTC')::date AS today;
 
 INSERT INTO assignments (id, employee_id, training_id, assigned_by, assigned_at, due_date, completed_at, renewal_of_id)
 SELECT id::uuid, emp::uuid, trn::uuid, mgr::uuid, (today - assigned_ago) + time '08:00',

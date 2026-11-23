@@ -14,6 +14,8 @@ const { createAccess } = require('./access');
 const { createEmployeesRouter } = require('./routes/employees');
 const { createTeamsRouter } = require('./routes/teams');
 const { createTrainingsRouter } = require('./routes/trainings');
+const { createAssignmentsRouter } = require('./routes/assignments');
+const { todayUtc } = require('./rules');
 
 // EN: The database pool is created on first use. It logs in with DB_USER / DB_PASSWORD from the
 //     environment, which must be S1's own least-privilege role svc_s1 (never the admin user).
@@ -63,6 +65,9 @@ function createApp(deps = {}) {
   const repo = createRepo(deps.db || lazyDb());
   const auth = lazyAuth(deps.authOptions || {}, repo);
   const access = createAccess(repo);
+  // EN: "today" (UTC) can be replaced in tests; the business rules always use this one function.
+  // Franco: "el naharda" (UTC) momken yetghayyar fel tests; el rules dayman betesta3mel el function di.
+  const today = deps.today || (() => todayUtc());
 
   const app = express();
   app.disable('x-powered-by'); // EN: do not advertise the framework / Franco: mate2olsh en da Express
@@ -79,8 +84,9 @@ function createApp(deps = {}) {
   });
 
   app.use(createEmployeesRouter({ auth, repo, access }));
-  app.use(createTeamsRouter({ auth, repo, access }));
+  app.use(createTeamsRouter({ auth, repo, access, today }));
   app.use(createTrainingsRouter({ auth, repo, access }));
+  app.use(createAssignmentsRouter({ auth, repo, access, today }));
 
   app.use(notFoundHandler);
   app.use(errorHandler(logger)); // EN: must be last / Franco: lazem yeb2a akher wa7ed

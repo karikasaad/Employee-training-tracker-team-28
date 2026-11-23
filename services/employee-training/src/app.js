@@ -13,6 +13,7 @@ const { createRepo } = require('./repo');
 const { createAccess } = require('./access');
 const { createEmployeesRouter } = require('./routes/employees');
 const { createTeamsRouter } = require('./routes/teams');
+const { createTrainingsRouter } = require('./routes/trainings');
 
 // EN: The database pool is created on first use. It logs in with DB_USER / DB_PASSWORD from the
 //     environment, which must be S1's own least-privilege role svc_s1 (never the admin user).
@@ -79,6 +80,7 @@ function createApp(deps = {}) {
 
   app.use(createEmployeesRouter({ auth, repo, access }));
   app.use(createTeamsRouter({ auth, repo, access }));
+  app.use(createTrainingsRouter({ auth, repo, access }));
 
   app.use(notFoundHandler);
   app.use(errorHandler(logger)); // EN: must be last / Franco: lazem yeb2a akher wa7ed

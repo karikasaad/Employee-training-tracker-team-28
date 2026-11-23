@@ -124,7 +124,7 @@ erDiagram
 |---|---|---|---|---|---|
 | teams | S1 | seed | S1: `GET /api/teams`, ownership checks; S2/S3 through S1's API | none | none |
 | employees | S1 | seed + Cognito provisioning | S1: `/api/employees/me`, `/api/employees/{id}`, team members | `cognito_sub` set at provisioning | none |
-| trainings | S1 | `POST /api/trainings` | `GET /api/trainings?category=`, `GET /api/trainings/{id}` | none | none |
+| trainings | S1 | `POST /api/trainings` | `GET /api/trainings?category=`, `GET /api/trainings/{id}` | `PUT /api/trainings/{id}` (creator only) | none |
 | assignments | S1 | `POST /api/assignments`, renewal on complete | `/api/assignments/me`, `/api/teams/{id}/assignments?status=` | `PATCH .../complete` sets `completed_at` | none (history) |
 | certificates | S2 | `POST /api/certificates` | `/me`, `?teamId=&reviewStatus=`, `/{id}` | `PUT` while Pending, `PATCH verify` | soft delete (`deleted_at`) |
 | compliance_flags | S2 | daily run-check | `GET /api/compliance/teams/{id}` | resolve / `notified_at` | none |

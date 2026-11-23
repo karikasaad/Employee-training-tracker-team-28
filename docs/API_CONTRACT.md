@@ -1,7 +1,7 @@
 # API Contract: Employee Training Tracker (Team 28)
 
 > **Owner:** Kerolus. This is the agreement every service and frontend page is built against. Change it only through a pull request reviewed by the owners of the affected services.
-> **Version:** 1.0. Stack: Node.js 22 + Express, PostgreSQL, Amazon Cognito, S3, Secrets Manager and CloudWatch (simulated on Floci).
+> **Version:** 1.1 (adds 4.6b `PUT /api/trainings/{id}`). Stack: Node.js 22 + Express, PostgreSQL, Amazon Cognito, S3, Secrets Manager and CloudWatch (simulated on Floci).
 
 ## Contents
 1. [Conventions](#1-conventions-all-services)
@@ -241,6 +241,22 @@ The team view, with **calculated** status.
   - `validityMonths`: integer 1–120 or `null`.
 - **201:** `Training`.
 - **Errors:** 400; 401; 403 (Employee); 409 (name already exists).
+
+### 4.6b `PUT /api/trainings/{id}`
+
+Edit a training. Added in v1.1.
+
+- **Roles:** Manager, and only the manager who **created** the training (`createdBy`). Another manager gets 403.
+- **Body:** the same four fields as 4.6, all sent again (full replacement):
+
+```json
+{ "name": "Fire Safety", "category": "Safety", "requiresCertificate": true, "validityMonths": 24 }
+```
+
+- **Validation:** the same as 4.6.
+- **Effect:** changes apply to future assignments and renewals. Completed assignments are not rewritten.
+- **200:** `Training`.
+- **Errors:** 400, 401, 403, 404, 409 (name already used by another training).
 
 ### 4.7 `GET /api/trainings?category=`
 

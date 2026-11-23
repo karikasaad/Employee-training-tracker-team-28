@@ -21,13 +21,15 @@ const { todayUtc } = require('./rules');
 //     environment, which must be S1's own least-privilege role svc_s1 (never the admin user).
 // Franco: El pool bta3 el database beyet3emel awel ma nesta3melo. Beydkhol b DB_USER / DB_PASSWORD men el
 //     environment, w lazem yeb2a el role bta3 S1 svc_s1 (3omro ma yeb2a el admin).
-function lazyDb() {
+function lazyDb(dbConfig) {
   let real = null;
   const get = () => {
     if (!real) {
       const { Pool } = require('pg');
       const { createDb, poolConfigFromEnv } = require('../../common/db');
-      real = createDb({ pool: new Pool(poolConfigFromEnv()) });
+      // EN: dbConfig comes from Secrets Manager in Docker (see server.js); otherwise from the environment.
+      // Franco: dbConfig gay men Secrets Manager fel Docker (shoof server.js); gheir kda men el environment.
+      real = createDb({ pool: new Pool(dbConfig || poolConfigFromEnv()) });
     }
     return real;
   };
@@ -62,7 +64,7 @@ function lazyAuth(authOptions, repo) {
 
 function createApp(deps = {}) {
   const logger = deps.logger || createLogger('employee-training');
-  const repo = createRepo(deps.db || lazyDb());
+  const repo = createRepo(deps.db || lazyDb(deps.dbConfig));
   const auth = lazyAuth(deps.authOptions || {}, repo);
   const access = createAccess(repo);
   // EN: "today" (UTC) can be replaced in tests; the business rules always use this one function.

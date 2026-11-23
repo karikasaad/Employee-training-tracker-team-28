@@ -1,8 +1,8 @@
-# EN: the build context is the REPO ROOT (see docker-compose.yml), because the service needs ../../common.
+# EN: Node 22 (the AWS SDK needs Node 22 or newer from January 2027). The build context is the REPO ROOT (see docker-compose.yml), because the service needs ../../common.
 #     Inside the image the folders keep the same layout: /app/services/common and /app/services/employee-training.
 # Franco: el build context hwa root el repo (shoof docker-compose.yml) 3ashan el service me7tag ../../common.
 #     Gowwa el image el folders benafs el tarteeb: /app/services/common w /app/services/employee-training.
-FROM node:20-alpine
+FROM node:22-alpine
 ENV NODE_ENV=production
 WORKDIR /app/services/employee-training
 

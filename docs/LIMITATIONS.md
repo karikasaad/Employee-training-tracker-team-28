@@ -20,3 +20,16 @@ AWS is simulated locally with Floci on Docker. Everything here is written from w
 | CloudWatch alarm | `node scripts/setup_log_alarms.js` creates the metric filter on each log group and the alarm `ett-repeated-auth-failures` (5 or more 401/403 in 5 minutes), but the emulator does not evaluate alarms, so its state stays `OK` even after `scripts/generate_suspicious_activity.js` | emulators store alarms without evaluating metrics | on AWS the alarm moves to `ALARM` and notifies the team through an SNS topic |
 | Security log queries | The evidence is read back with `node scripts/security_log_queries.js` (FilterLogEvents), counted per service, path and minute | CloudWatch Logs Insights queries are not emulated | use Logs Insights saved queries and a CloudWatch dashboard |
 | Log shipping | Each service sends its JSON logs from inside the process (`services/common/cloudwatch.js`). If CloudWatch is down, that batch is dropped after one warning, and the lines stay in `docker logs` | keeps the services independent of the emulator | on AWS use the awslogs log driver or the CloudWatch agent, with a retention policy per log group |
+
+### Floci spike results (added with the floci-cognito-spike branch)
+
+Real results from `python scripts/dev.py spike` (see `docs/FLOCI_SPIKE.md`).
+
+| Area | What differs from real AWS | Reason | Proposed improvement on real AWS |
+| --- | --- | --- | --- |
+| S3 pre-signed URL expiry | A link signed for 5 s still downloads after 7 s (HTTP 200): Floci does not enforce `X-Amz-Expires`. Our links are signed for 300 s and the S2 tests check that value, but the real expiry cannot be shown locally | emulator does not check the signature time | on AWS the link stops working after 300 s; show it in the demo with a short expiry |
+| S3 anonymous read | An object can be read with a plain GET and no signature (HTTP 200) | Floci does not enforce bucket access rules | Block Public Access ON plus a bucket policy that denies non-TLS; the app only hands out S2's signed links anyway |
+| S3 versioning, public access block, default encryption | `init.py` sets them, but reading them back (`GetBucketVersioning`, `GetBucketEncryption`) returns HTTP 500 | not implemented in the emulator | check them with `get-bucket-versioning`, `get-public-access-block`, `get-bucket-encryption` on real AWS |
+| EventBridge Scheduler | Fixed: `rate(1 days)` was rejected (AWS wants `rate(1 day)`); with the fix `create_schedule` is accepted. Scheduler targets are AWS APIs, not HTTP endpoints | AWS design | EventBridge rule + API destination (OAuth client credentials); locally the cron container |
+| Cognito MFA (TOTP) for managers | Only the pool-level TOTP setting is confirmed on Floci; enrolment, the sign-in challenge and rejecting a wrong code are not verified yet (`cognito_spike.js` checks them) | emulator coverage unknown; spike not run yet | MFA Required on the pool (Cognito cannot require it for one group), or a separate user pool for managers |
+| Cognito GlobalSignOut | Not verified yet on Floci. On any platform, services check JWTs offline, so a signed-out access token keeps working until it expires | JWTs are self-contained | keep the 15-minute access token; GlobalSignOut revokes the refresh token on AWS |

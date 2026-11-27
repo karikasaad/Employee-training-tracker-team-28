@@ -28,6 +28,6 @@ Full instructions and troubleshooting: [docs/DEV_SETUP.md](docs/DEV_SETUP.md).
 
 ## Secret scan in CI
 
-Every push and every pull request runs [gitleaks](https://github.com/gitleaks/gitleaks) over the whole git history (`.github/workflows/secret-scan.yml`). If it finds a key, token or password the job **fails**, so the pull request must be fixed before it is merged. The settings are in `.gitleaks.toml`: all default rules stay on, and only three test files with fake values are skipped.
+Every push and every pull request runs [gitleaks](https://github.com/gitleaks/gitleaks) over the whole git history (`.github/workflows/secret-scan.yml`). If it finds a key, token or password the job **fails**, so the pull request must be fixed before it is merged. The settings are in `.gitleaks.toml`: all default rules stay on, and only four test files with fake values (public test values) are skipped.
 
 If it fails: remove the secret from the code, **rotate it** (a leaked secret must be replaced, deleting the line is not enough), and clean the history before pushing again. To check locally before you push: `gitleaks detect --source . --config .gitleaks.toml --redact`.

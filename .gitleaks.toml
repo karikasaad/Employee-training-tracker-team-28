@@ -1,0 +1,15 @@
+# EN: gitleaks settings. We keep ALL the default rules and only skip two test files that contain
+#     obviously fake values on purpose (to test that our code hides them). Real files are always scanned.
+# Franco: settings gitleaks. Bne-5alli KOL el rules el default w bnes-kot 2 test files bas feehom values
+#     fake 3amdan (3ashan netest en el code beyekhabbiha). El files el 7a2i2eya dayman betet-fa7as.
+title = "Employee Training Tracker secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Test files with fake secrets on purpose"
+paths = [
+  '''tests/security/lib\.test\.js''',
+  '''services/certificate-compliance/test/dailyCheck\.test\.js''',
+]
